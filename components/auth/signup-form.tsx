@@ -1,195 +1,33 @@
-// "use client"
+"use client"
 
-// import type React from "react"
+import type React from "react"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
-// import { useState } from "react"
-// import { useRouter } from "next/navigation"
-
-// type Service = { id: number; name: string; category_id: number; price: number | string; duration_min: number | null }
-// type Category = { id: number; name: string; services: Service[] }
-
-// export default function SignupForm({ categories }: { categories: Category[] }) {
-//   const router = useRouter()
-//   const [name, setName] = useState("")
-//   const [email, setEmail] = useState("")
-//   const [mobile, setMobile] = useState("")
-//   const [role, setRole] = useState<"admin" | "receptionist" | "staff">("receptionist")
-//   const [selectedServices, setSelectedServices] = useState<number[]>([])
-//   const [loading, setLoading] = useState(false)
-//   const [error, setError] = useState<string | null>(null)
-//   const [success, setSuccess] = useState<string | null>(null)
-
-//   const toggleService = (id: number) => {
-//     setSelectedServices((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
-//   }
-
-//   async function onSubmit(e: React.FormEvent) {
-//     e.preventDefault()
-//     setError(null)
-//     setSuccess(null)
-//     setLoading(true)
-//     try {
-//       const res = await fetch("/api/auth/signup", {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({
-//           name,
-//           email: email || undefined,
-//           mobile,
-//           role,
-//           services: role === "staff" ? selectedServices : undefined,
-//         }),
-//       })
-//       const data = await res.json()
-//       if (!res.ok) throw new Error(data.error || "Signup failed")
-//       setSuccess("Account created. Redirecting to login...")
-//       setTimeout(() => router.push("/login"), 800)
-//     } catch (err: any) {
-//       setError(err.message)
-//     } finally {
-//       setLoading(false)
-//     }
-//   }
-
-//   return (
-//     <form onSubmit={onSubmit} className="w-full max-w-md mx-auto p-4 md:p-6 space-y-4">
-//       <h1 className="text-2xl font-semibold text-pretty">Create account</h1>
-
-//       <div className="flex flex-col gap-2">
-//         <label className="text-sm" htmlFor="name">
-//           Name
-//         </label>
-//         <input
-//           id="name"
-//           className="h-10 rounded-md border border-(--color-border) bg-(--color-card) px-3"
-//           placeholder="Full name"
-//           value={name}
-//           onChange={(e) => setName(e.target.value)}
-//           required
-//         />
-//       </div>
-
-//       <div className="flex flex-col gap-2">
-//         <label className="text-sm" htmlFor="email">
-//           Email (optional)
-//         </label>
-//         <input
-//           id="email"
-//           type="email"
-//           className="h-10 rounded-md border border-(--color-border) bg-(--color-card) px-3"
-//           placeholder="you@example.com"
-//           value={email}
-//           onChange={(e) => setEmail(e.target.value)}
-//         />
-//       </div>
-
-//       <div className="flex flex-col gap-2">
-//         <label className="text-sm" htmlFor="mobile">
-//           Mobile (primary)
-//         </label>
-//         <input
-//           id="mobile"
-//           className="h-10 rounded-md border border-(--color-border) bg-(--color-card) px-3"
-//           placeholder="+19998887777"
-//           value={mobile}
-//           onChange={(e) => setMobile(e.target.value)}
-//           required
-//         />
-//         <p className="text-xs text-(--color-muted-foreground)">Use country code, digits only.</p>
-//       </div>
-
-//       <div className="flex flex-col gap-2">
-//         <label className="text-sm" htmlFor="role">
-//           Role
-//         </label>
-//         <select
-//           id="role"
-//           className="h-10 rounded-md border border-(--color-border) bg-(--color-card) px-3"
-//           value={role}
-//           onChange={(e) => setRole(e.target.value as any)}
-//         >
-//           <option value="admin">Admin/Owner</option>
-//           <option value="receptionist">Receptionist</option>
-//           <option value="staff">Staff</option>
-//         </select>
-//       </div>
-
-//       {role === "staff" && (
-//         <div className="space-y-3">
-//           <h2 className="text-lg font-medium">Select services you can perform</h2>
-//           <div className="space-y-4">
-//             {categories.map((cat) => (
-//               <div key={cat.id} className="rounded-md border border-(--color-border)">
-//                 <div className="px-3 py-2 bg-(--color-secondary) text-sm font-medium">{cat.name}</div>
-//                 <div className="p-3 grid grid-cols-1 gap-2">
-//                   {cat.services.map((svc) => (
-//                     <label key={svc.id} className="flex items-center gap-3">
-//                       <input
-//                         type="checkbox"
-//                         checked={selectedServices.includes(svc.id)}
-//                         onChange={() => toggleService(svc.id)}
-//                         className="h-4 w-4"
-//                       />
-//                       <span className="text-sm">{svc.name}</span>
-//                     </label>
-//                   ))}
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       )}
-
-//       {error && <p className="text-sm text-(--color-destructive)">{error}</p>}
-//       {success && <p className="text-sm text-(--color-primary)">{success}</p>}
-
-//       <button
-//         type="submit"
-//         disabled={loading}
-//         className="w-full h-10 rounded-md bg-(--color-primary) text-(--color-primary-foreground) disabled:opacity-60"
-//       >
-//         {loading ? "Creating..." : "Create account"}
-//       </button>
-
-//       <p className="text-sm text-center">
-//         Already have an account?{" "}
-//         <a href="/login" className="underline">
-//           Log in
-//         </a>
-//       </p>
-//     </form>
-//   )
-// }
-
-
-"use client";
-
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-
-type Service = { id: number; name: string; category_id: number };
-type Category = { id: number; name: string; services: Service[] };
+type Service = { id: number; name: string; category_id: number }
+type Category = { id: number; name: string; services: Service[] }
 
 export default function SignupForm({ categories }: { categories: Category[] }) {
-  const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [role, setRole] = useState<"admin" | "receptionist" | "staff">("receptionist");
-  const [selectedServices, setSelectedServices] = useState<number[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const router = useRouter()
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [mobile, setMobile] = useState("")
+  const [role, setRole] = useState<"admin" | "receptionist" | "staff">("receptionist")
+  const [selectedServices, setSelectedServices] = useState<number[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [password, setPassword] = useState("")
 
   const toggleService = (id: number) => {
-    setSelectedServices((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  };
+    setSelectedServices((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
 
   async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    setLoading(true);
+    e.preventDefault()
+    setError(null)
+    setSuccess(null)
+    setLoading(true)
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
@@ -200,16 +38,17 @@ export default function SignupForm({ categories }: { categories: Category[] }) {
           mobile,
           role,
           services: role === "staff" ? selectedServices : undefined,
+          password,
         }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Signup failed");
-      setSuccess("Account created. Redirecting to login...");
-      setTimeout(() => router.push("/login"), 800);
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Signup failed")
+      setSuccess("Account created. Redirecting to login...")
+      setTimeout(() => router.push("/login"), 800)
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
@@ -275,6 +114,22 @@ export default function SignupForm({ categories }: { categories: Category[] }) {
       </div>
 
       <div className="flex flex-col gap-1">
+        <label htmlFor="password" className="text-sm font-semibold text-gray-700">
+          Password
+        </label>
+        <input
+          id="password"
+          type="password"
+          className="w-full h-11 rounded-lg border border-gray-300 px-4 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+          placeholder="Enter a password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          autoComplete="new-password"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
         <label htmlFor="role" className="text-sm font-semibold text-gray-700">
           Role
         </label>
@@ -297,9 +152,7 @@ export default function SignupForm({ categories }: { categories: Category[] }) {
           <div className="flex flex-col gap-4 max-h-64 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-indigo-50">
             {categories.map((cat) => (
               <fieldset key={cat.id} className="border border-gray-300 rounded-md">
-                <legend className="px-3 py-2 bg-indigo-100 text-indigo-700 font-semibold text-sm">
-                  {cat.name}
-                </legend>
+                <legend className="px-3 py-2 bg-indigo-100 text-indigo-700 font-semibold text-sm">{cat.name}</legend>
                 <div className="p-3 grid grid-cols-1 gap-2">
                   {cat.services.map((svc) => (
                     <label
@@ -351,5 +204,5 @@ export default function SignupForm({ categories }: { categories: Category[] }) {
         </a>
       </p>
     </form>
-  );
+  )
 }

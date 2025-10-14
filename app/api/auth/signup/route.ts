@@ -7,6 +7,7 @@ type Body = {
   mobile: string
   role: "admin" | "receptionist" | "staff"
   services?: number[] // only if role=staff
+  password?: string
 }
 
 export async function POST(req: Request) {
@@ -16,6 +17,7 @@ export async function POST(req: Request) {
     const mobile = (body.mobile || "").trim()
     const email = (body.email || "").trim() || null
     const role = body.role
+    const password = (body.password || "").trim()
 
     if (!name || !mobile || !role) {
       return NextResponse.json({ error: "name, mobile, role are required" }, { status: 400 })
@@ -26,17 +28,27 @@ export async function POST(req: Request) {
     if (!["admin", "receptionist", "staff"].includes(role)) {
       return NextResponse.json({ error: "invalid role" }, { status: 400 })
     }
+    if (!password) {
+      return NextResponse.json({ error: "password is required" }, { status: 400 })
+    }
 
     const exists = await query<{ mobile: string }>("SELECT mobile FROM users WHERE mobile = ?", [mobile])
     if (exists.length > 0) {
       return NextResponse.json({ error: "Mobile already registered" }, { status: 409 })
     }
 
-    await execute("INSERT INTO users (mobile, name, email, role) VALUES (?, ?, ?, ?)", [mobile, name, email, role])
+    // NOTE: Currently storing plaintext to match existing login behavior.
+    // Replace with a hash in future (bcrypt) and update login to compare hashes.
+    await execute("INSERT INTO users (mobile, name, email, role, password) VALUES (?, ?, ?, ?, ?)", [
+      mobile,
+      name,
+      email,
+      role,
+      password,
+    ])
 
     if (role === "staff" && Array.isArray(body.services) && body.services.length > 0) {
       const values = body.services.map((sid) => [mobile, sid])
-      // bulk insert
       await execute(
         `INSERT INTO staff_services (mobile, service_id) VALUES ${values.map(() => "(?, ?)").join(", ")}`,
         values.flat(),
