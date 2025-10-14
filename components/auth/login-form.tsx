@@ -1,83 +1,12 @@
-// "use client"
-
-// import type React from "react"
-
-// import { useState } from "react"
-// import { useRouter } from "next/navigation"
-
-// export default function LoginForm() {
-//   const [mobile, setMobile] = useState("")
-//   const [loading, setLoading] = useState(false)
-//   const [error, setError] = useState<string | null>(null)
-//   const router = useRouter()
-
-//   async function onSubmit(e: React.FormEvent) {
-//     e.preventDefault()
-//     setError(null)
-//     setLoading(true)
-//     try {
-//       const res = await fetch("/api/auth/login", {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({ mobile }),
-//       })
-//       const data = await res.json()
-//       if (!res.ok) throw new Error(data.error || "Login failed")
-//       router.replace("/dashboard")
-//     } catch (err: any) {
-//       setError(err.message)
-//     } finally {
-//       setLoading(false)
-//     }
-//   }
-
-//   return (
-//     <form onSubmit={onSubmit} className="w-full max-w-md mx-auto p-4 md:p-6 space-y-4">
-//       <h1 className="text-2xl font-semibold text-pretty">Welcome back</h1>
-
-//       <div className="flex flex-col gap-2">
-//         <label className="text-sm" htmlFor="mobile">
-//           Mobile
-//         </label>
-//         <input
-//           id="mobile"
-//           className="h-10 rounded-md border border-(--color-border) bg-(--color-card) px-3"
-//           placeholder="+19998887777"
-//           value={mobile}
-//           onChange={(e) => setMobile(e.target.value)}
-//           required
-//         />
-//       </div>
-
-//       {error && <p className="text-sm text-(--color-destructive)">{error}</p>}
-
-//       <button
-//         type="submit"
-//         disabled={loading}
-//         className="w-full h-10 rounded-md bg-(--color-primary) text-(--color-primary-foreground) disabled:opacity-60"
-//       >
-//         {loading ? "Signing in..." : "Sign in"}
-//       </button>
-
-//       <p className="text-sm text-center">
-//         New here?{" "}
-//         <a href="/signup" className="underline">
-//           Create account
-//         </a>
-//       </p>
-//     </form>
-//   )
-// }
-
-
 "use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Loader2, AlertCircle } from "lucide-react";
+import { User, Loader2, AlertCircle, KeyRound } from "lucide-react";
 
 export default function LoginForm() {
   const [mobile, setMobile] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -90,11 +19,11 @@ export default function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile }),
+        body: JSON.stringify({ mobile, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
-      router.replace("/dashboard");
+      router.replace("/dashboard/appointments");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -132,6 +61,29 @@ export default function LoginForm() {
             onChange={(e) => setMobile(e.target.value)}
             required
             aria-describedby={error ? "mobile-error" : undefined}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="password" className="text-sm font-semibold text-gray-700">
+          Password
+        </label>
+        <div className="relative">
+          <KeyRound
+            size={20}
+            className="absolute top-2.5 left-3 text-indigo-400 pointer-events-none"
+          />
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            className="w-full h-11 pl-10 pr-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-400 transition"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            aria-describedby={error ? "password-error" : undefined}
           />
         </div>
       </div>

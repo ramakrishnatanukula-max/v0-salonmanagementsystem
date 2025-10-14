@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ClipboardList, Layers } from "lucide-react";
+import { Home, ClipboardList, Layers, CreditCard } from "lucide-react";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -22,6 +22,11 @@ export default function BottomNav() {
       label: "Categories",
       href: "/dashboard/services/categories",
       icon: Layers,
+    },
+        {
+      label: "Billing",
+      href: "/dashboard/billing",
+      icon: CreditCard ,
     },
   ];
 

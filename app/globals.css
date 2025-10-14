@@ -122,4 +122,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  .issue-indicator, /* try the class if known */
+  [data-sonner-toast], /* try this for sonner/toast notifications */
+  div[style*="Issue"], /* fallback: hide any div containing 'Issue' in style */
+  div[style*="1 Issue"] {
+    display: none !important;
+  }
 }

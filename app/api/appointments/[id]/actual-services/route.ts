@@ -10,8 +10,9 @@ type Item = {
 }
 
 // GET /api/appointments/[id]/actual-services
-export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const appointmentId = Number(params.id)
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params
+  const appointmentId = Number(id)
   if (!Number.isFinite(appointmentId)) {
     return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 })
   }
@@ -28,9 +29,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 }
 
 // POST /api/appointments/[id]/actual-services
-// body: { items: Array<{service_id, doneby_staff_id?, price?, notes?, status?}> }
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const appointmentId = Number(params.id)
+export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params
+  const appointmentId = Number(id)
   if (!Number.isFinite(appointmentId)) {
     return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 })
   }
@@ -69,9 +70,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 }
 
 // DELETE /api/appointments/[id]/actual-services
-// body: { ids: number[] }
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-  const appointmentId = Number(params.id)
+export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params
+  const appointmentId = Number(id)
   if (!Number.isFinite(appointmentId)) {
     return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 })
   }
@@ -89,9 +90,9 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 }
 
 // PATCH /api/appointments/[id]/actual-services
-// body: { items: Array<{id, doneby_staff_id?, price?, notes?, status?}> }
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const appointmentId = Number(params.id)
+export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params
+  const appointmentId = Number(id)
   if (!Number.isFinite(appointmentId)) {
     return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 })
   }

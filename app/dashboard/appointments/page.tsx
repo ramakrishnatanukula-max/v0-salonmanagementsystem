@@ -518,7 +518,7 @@ export default function AppointmentsPage() {
       <button
         onClick={() => setShowForm(true)}
         aria-label="Add new appointment"
-        className="fixed bottom-8 right-7 z-50 bg-gradient-to-tr from-indigo-600 to-green-500 p-4 rounded-full shadow-xl text-white text-3xl focus:outline-none"
+        className="fixed bottom-24 right-7 z-50 bg-gradient-to-tr from-indigo-600 to-green-500 p-4 rounded-full shadow-xl text-white text-3xl focus:outline-none"
       >
         <Plus size={28} />
       </button>
@@ -1255,4 +1255,11 @@ function AddServiceModal({ services, staff, appointmentId, onClose, onSaved }) {
       </form>
     </div>
   );
+}
+
+// Hide bottom nav on this page (if you use a layout or nav component, you may need to add logic there)
+// If you use a layout, you can add this at the top of the file:
+if (typeof window !== "undefined") {
+  const nav = document.querySelector("nav");
+  if (nav) nav.style.display = "none";
 }
