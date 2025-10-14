@@ -67,3 +67,67 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   return NextResponse.json({ inserted: res.affectedRows || items.length })
 }
+
+// DELETE /api/appointments/[id]/actual-services
+// body: { ids: number[] }
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  const appointmentId = Number(params.id)
+  if (!Number.isFinite(appointmentId)) {
+    return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 })
+  }
+  const body = await req.json().catch(() => ({}))
+  const ids: number[] = Array.isArray(body?.ids) ? body.ids : []
+  if (!ids.length) {
+    return NextResponse.json({ error: "No ids provided" }, { status: 400 })
+  }
+  // Only delete rows belonging to this appointment
+  const res: any = await execute(
+    `DELETE FROM appointment_actualtaken_services WHERE appointment_id = ? AND id IN (${ids.map(() => "?").join(",")})`,
+    [appointmentId, ...ids],
+  )
+  return NextResponse.json({ deleted: res.affectedRows || 0 })
+}
+
+// PATCH /api/appointments/[id]/actual-services
+// body: { items: Array<{id, doneby_staff_id?, price?, notes?, status?}> }
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const appointmentId = Number(params.id)
+  if (!Number.isFinite(appointmentId)) {
+    return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 })
+  }
+  const body = await req.json().catch(() => ({}))
+  const items: any[] = Array.isArray(body?.items) ? body.items : []
+  if (!items.length) {
+    return NextResponse.json({ error: "No items provided" }, { status: 400 })
+  }
+  let updated = 0
+  for (const it of items) {
+    if (!Number.isFinite(it.id)) continue
+    const fields = []
+    const values = []
+    if ("doneby_staff_id" in it) {
+      fields.push("doneby_staff_id = ?")
+      values.push(it.doneby_staff_id != null ? Number(it.doneby_staff_id) : null)
+    }
+    if ("price" in it) {
+      fields.push("price = ?")
+      values.push(it.price != null && it.price !== "" ? Number(it.price) : null)
+    }
+    if ("notes" in it) {
+      fields.push("notes = ?")
+      values.push(it.notes ?? null)
+    }
+    if ("status" in it) {
+      fields.push("status = ?")
+      values.push(it.status ?? null)
+    }
+    if (!fields.length) continue
+    values.push(appointmentId, it.id)
+    const res: any = await execute(
+      `UPDATE appointment_actualtaken_services SET ${fields.join(", ")} WHERE appointment_id = ? AND id = ?`,
+      values,
+    )
+    updated += res.affectedRows || 0
+  }
+  return NextResponse.json({ updated })
+}
