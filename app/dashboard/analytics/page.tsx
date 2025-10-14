@@ -85,7 +85,8 @@ export default function AnalyticsPage() {
   return (
     <main className="min-h-dvh p-4 md:p-6 space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl md:text-3xl font-semibold text-balance">Analytics</h1>
+        {/* neutral heading */}
+        <h1 className="text-2xl md:text-3xl font-semibold text-balance text-gray-900">Analytics</h1>
         <p className="text-sm text-gray-600">Insights for {title}</p>
 
         {/* Filters - Mobile first */}
@@ -151,41 +152,44 @@ export default function AnalyticsPage() {
         </div>
       </header>
 
-      {/* KPIs */}
+      {/* KPIs - neutral text (colors only in charts) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-indigo-200">
+        <Card className="border-gray-200">
           <CardHeader>
-            <CardTitle className="text-indigo-700">Appointments</CardTitle>
+            <CardTitle className="text-gray-900">Appointments</CardTitle>
           </CardHeader>
-          <CardContent className="text-3xl font-bold text-indigo-900">{kpis.appointments}</CardContent>
+          <CardContent className="text-3xl font-bold text-gray-900">{kpis.appointments}</CardContent>
         </Card>
-        <Card className="border-emerald-200">
+        <Card className="border-gray-200">
           <CardHeader>
-            <CardTitle className="text-emerald-700">Completed</CardTitle>
+            <CardTitle className="text-gray-900">Completed</CardTitle>
           </CardHeader>
-          <CardContent className="text-3xl font-bold text-emerald-900">{kpis.completed}</CardContent>
+          <CardContent className="text-3xl font-bold text-gray-900">{kpis.completed}</CardContent>
         </Card>
-        <Card className="border-sky-200">
+        <Card className="border-gray-200">
           <CardHeader>
-            <CardTitle className="text-sky-700">Revenue</CardTitle>
+            <CardTitle className="text-gray-900">Revenue</CardTitle>
           </CardHeader>
-          <CardContent className="text-3xl font-bold text-sky-900">₹{Number(kpis.revenue || 0).toFixed(0)}</CardContent>
+          <CardContent className="text-3xl font-bold text-gray-900">
+            ₹{Number(kpis.revenue || 0).toFixed(0)}
+          </CardContent>
         </Card>
-        <Card className="border-indigo-200">
+        <Card className="border-gray-200">
           <CardHeader>
-            <CardTitle className="text-indigo-700">Services Performed</CardTitle>
+            <CardTitle className="text-gray-900">Services Performed</CardTitle>
           </CardHeader>
-          <CardContent className="text-3xl font-bold text-indigo-900">{kpis.servicesPerformed}</CardContent>
+          <CardContent className="text-3xl font-bold text-gray-900">{kpis.servicesPerformed}</CardContent>
         </Card>
       </div>
 
       {/* Status Breakdown (Pie) */}
       <Card>
         <CardHeader>
-          <CardTitle>Status Breakdown</CardTitle>
+          <CardTitle className="text-gray-900">Status Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[260px]">
+          {/* smaller height on mobile */}
+          <div className="h-[220px] md:h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -210,10 +214,13 @@ export default function AnalyticsPage() {
       {/* Top Services */}
       <Card>
         <CardHeader>
-          <CardTitle>Top Services</CardTitle>
+          <CardTitle className="text-gray-900">Top Services</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={{ count: { label: "Count", color: "hsl(var(--chart-2))" } }} className="h-[280px]">
+          <ChartContainer
+            config={{ count: { label: "Count", color: "hsl(var(--chart-2))" } }}
+            className="h-[240px] md:h-[280px]"
+          >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={topServices} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -231,15 +238,15 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      {/* Staff Analytics - by services performed */}
+      {/* Staff Analytics - Services */}
       <Card>
         <CardHeader>
-          <CardTitle>Staff — Services Performed</CardTitle>
+          <CardTitle className="text-gray-900">Staff — Services Performed</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer
             config={{ services_count: { label: "Services", color: "hsl(var(--chart-3))" } }}
-            className="h-[300px]"
+            className="h-[240px] md:h-[300px]"
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={staff} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
@@ -255,15 +262,15 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      {/* Staff Analytics — Revenue */}
+      {/* Staff Analytics - Revenue */}
       <Card>
         <CardHeader>
-          <CardTitle>Staff — Revenue</CardTitle>
+          <CardTitle className="text-gray-900">Staff — Revenue</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer
             config={{ revenue: { label: "Revenue", color: "hsl(var(--chart-4))" } }}
-            className="h-[300px]"
+            className="h-[240px] md:h-[300px]"
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={staff} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>

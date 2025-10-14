@@ -28,49 +28,52 @@ export default function BottomNav() {
     <nav
       role="navigation"
       aria-label="Primary"
-      className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 w-[95vw] max-w-md bg-white/85 border border-indigo-200 shadow-2xl rounded-full px-2 py-1.5 flex items-center justify-between backdrop-blur-[10px] drop-shadow-lg"
+      className="fixed inset-x-0 bottom-0 z-50 bg-white/90 border-t border-indigo-200 backdrop-blur supports-[backdrop-filter]:bg-white/80"
       style={{
-        boxShadow: "0 2px 16px 4px rgba(76,70,144,0.14)",
-        transition: "all .22s cubic-bezier(.75,0,.15,1)",
         WebkitBackdropFilter: "blur(10px)",
-        paddingBottom: "calc(0.375rem + env(safe-area-inset-bottom, 0px))",
       }}
     >
-      {navItems.map(({ label, href, icon: Icon }) => {
-        const isActive = pathname === href
-        return (
-          <Link
-            key={href}
-            href={href}
-            aria-current={isActive ? "page" : undefined}
-            className={`group flex flex-col items-center justify-center min-w-[44px] px-3 py-1 transition-all rounded-full relative ${
-              isActive
-                ? "bg-gradient-to-tr from-indigo-500 to-green-500 text-white shadow-md scale-105"
-                : "text-indigo-500 hover:text-indigo-700 active:scale-95"
-            }`}
-            style={{ fontWeight: isActive ? 700 : 500 }}
-          >
-            <span className="relative flex items-center justify-center">
-              <Icon
-                size={isActive ? 22 : 18}
-                className={`transition-all duration-150 ${
-                  isActive ? "text-white drop-shadow" : "text-indigo-500 group-hover:text-indigo-700"
+      <div
+        className="mx-auto max-w-screen-sm px-2 pt-1"
+        style={{ paddingBottom: "calc(0.375rem + env(safe-area-inset-bottom, 0px))" }}
+      >
+        <div className="flex items-center justify-between">
+          {navItems.map(({ label, href, icon: Icon }) => {
+            const isActive = pathname === href
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={isActive ? "page" : undefined}
+                className={`group flex-1 flex flex-col items-center justify-center py-2 rounded-md transition-all ${
+                  isActive ? "scale-[1.02]" : ""
                 }`}
-              />
-              {isActive && (
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white/90 border border-indigo-200 shadow" />
-              )}
-            </span>
-            <span
-              className={`text-[10px] mt-0.5 tracking-wide transition-all ${
-                isActive ? "text-white font-bold" : "text-indigo-600 font-medium group-hover:text-indigo-700"
-              }`}
-            >
-              {label}
-            </span>
-          </Link>
-        )
-      })}
+                style={{ fontWeight: isActive ? 700 : 500 }}
+              >
+                <span
+                  className={`flex items-center justify-center w-10 h-10 rounded-full transition-all ${
+                    isActive
+                      ? "bg-gradient-to-tr from-indigo-500 to-green-500 shadow-md"
+                      : "bg-white border border-indigo-200"
+                  }`}
+                >
+                  <Icon
+                    size={isActive ? 22 : 18}
+                    className={`transition-all duration-150 ${isActive ? "text-white" : "text-gray-700"}`}
+                  />
+                </span>
+                <span
+                  className={`text-[10px] mt-1 tracking-wide transition-all ${
+                    isActive ? "text-gray-900 font-semibold" : "text-gray-700"
+                  }`}
+                >
+                  {label}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
     </nav>
   )
 }
