@@ -2,18 +2,27 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import useSWR from "swr"
 import { Home, ClipboardList, Layers, CreditCard, BarChart3 } from "lucide-react"
+
+const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const { data } = useSWR("/api/auth/me", fetcher, { revalidateOnFocus: false })
+  const role = data?.user?.role as "admin" | "receptionist" | "staff" | undefined
 
-  const navItems = [
+  // Base items
+  const baseItems = [
     { label: "Appointments", href: "/dashboard/appointments", icon: Home },
     { label: "Services", href: "/dashboard/services", icon: ClipboardList },
     { label: "Categories", href: "/dashboard/services/categories", icon: Layers },
     { label: "Billing", href: "/dashboard/billing", icon: CreditCard },
     { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   ]
+
+  // If staff, only show Appointments
+  const navItems = role === "staff" ? baseItems.slice(0, 1) : baseItems
 
   return (
     <nav
