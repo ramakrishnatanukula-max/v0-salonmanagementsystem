@@ -1,0 +1,168 @@
+// "use client"
+
+// import type React from "react"
+
+// import { useState } from "react"
+// import { useRouter } from "next/navigation"
+
+// export default function LoginForm() {
+//   const [mobile, setMobile] = useState("")
+//   const [loading, setLoading] = useState(false)
+//   const [error, setError] = useState<string | null>(null)
+//   const router = useRouter()
+
+//   async function onSubmit(e: React.FormEvent) {
+//     e.preventDefault()
+//     setError(null)
+//     setLoading(true)
+//     try {
+//       const res = await fetch("/api/auth/login", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ mobile }),
+//       })
+//       const data = await res.json()
+//       if (!res.ok) throw new Error(data.error || "Login failed")
+//       router.replace("/dashboard")
+//     } catch (err: any) {
+//       setError(err.message)
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
+
+//   return (
+//     <form onSubmit={onSubmit} className="w-full max-w-md mx-auto p-4 md:p-6 space-y-4">
+//       <h1 className="text-2xl font-semibold text-pretty">Welcome back</h1>
+
+//       <div className="flex flex-col gap-2">
+//         <label className="text-sm" htmlFor="mobile">
+//           Mobile
+//         </label>
+//         <input
+//           id="mobile"
+//           className="h-10 rounded-md border border-(--color-border) bg-(--color-card) px-3"
+//           placeholder="+19998887777"
+//           value={mobile}
+//           onChange={(e) => setMobile(e.target.value)}
+//           required
+//         />
+//       </div>
+
+//       {error && <p className="text-sm text-(--color-destructive)">{error}</p>}
+
+//       <button
+//         type="submit"
+//         disabled={loading}
+//         className="w-full h-10 rounded-md bg-(--color-primary) text-(--color-primary-foreground) disabled:opacity-60"
+//       >
+//         {loading ? "Signing in..." : "Sign in"}
+//       </button>
+
+//       <p className="text-sm text-center">
+//         New here?{" "}
+//         <a href="/signup" className="underline">
+//           Create account
+//         </a>
+//       </p>
+//     </form>
+//   )
+// }
+
+
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { User, Loader2, AlertCircle } from "lucide-react";
+
+export default function LoginForm() {
+  const [mobile, setMobile] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobile }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Login failed");
+      router.replace("/dashboard");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={onSubmit}
+      className="w-full max-w-md mx-auto p-6 bg-white rounded-xl shadow-lg flex flex-col gap-6"
+      aria-label="Login form"
+    >
+      <h1 className="text-2xl font-extrabold text-indigo-700 text-center select-none">
+        UniSalon
+      </h1>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="mobile" className="text-sm font-semibold text-gray-700">
+          Mobile Number
+        </label>
+        <div className="relative">
+          <User
+            size={20}
+            className="absolute top-2.5 left-3 text-indigo-400 pointer-events-none"
+          />
+          <input
+            id="mobile"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            className="w-full h-11 pl-10 pr-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-400 transition"
+            placeholder="+91 9988877779"
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+            required
+            aria-describedby={error ? "mobile-error" : undefined}
+          />
+        </div>
+      </div>
+
+      {error && (
+        <p
+          id="mobile-error"
+          className="flex items-center gap-2 text-sm text-red-600 font-semibold"
+          role="alert"
+        >
+          <AlertCircle size={18} />
+          {error}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="relative w-full h-11 rounded-lg bg-gradient-to-tr from-indigo-600 to-green-500 text-white font-extrabold shadow-lg hover:brightness-110 transition flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
+        aria-live="polite"
+      >
+        {loading && <Loader2 className="animate-spin" size={20} />}
+        {loading ? "Signing in..." : "Sign in"}
+      </button>
+
+      <p className="text-sm text-center text-gray-600 select-none">
+        New here?{" "}
+        <a href="/signup" className="underline text-indigo-600 hover:text-indigo-700">
+          Create account
+        </a>
+      </p>
+    </form>
+  );
+}
