@@ -28,7 +28,7 @@ export default function BottomNav() {
     <nav
       role="navigation"
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-50 bg-white/90 border-t border-indigo-200 backdrop-blur supports-[backdrop-filter]:bg-white/80"
+      className="fixed inset-x-0 bottom-0 z-50 w-full bg-white/90 border-t border-indigo-200 backdrop-blur supports-[backdrop-filter]:bg-white/80"
       style={{
         WebkitBackdropFilter: "blur(10px)",
       }}

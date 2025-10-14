@@ -1,96 +1,214 @@
-"use client";
-import React, { useState } from "react";
-import useSWR from "swr";
-import { Plus, X } from "lucide-react";
+"use client"
+import React, { useState } from "react"
+import useSWR from "swr"
+import { X, ChevronDown, ChevronUp } from "lucide-react"
 
-const fetcher = (u: string) => fetch(u).then(r => r.json());
-const fmt = (d: Date) => d.toISOString().slice(0, 10);
+const fetcher = (u: string) => fetch(u).then((r) => r.json())
+
+function useActuals(appointmentId: number, enabled: boolean) {
+  const key = enabled ? `/api/appointments/${appointmentId}/actual-services` : null
+  // @ts-ignore SWR conditional key
+  return useSWR(key, fetcher)
+}
+
+function computeTotals(items: any[]) {
+  let subtotal = 0
+  let tax = 0
+  for (const it of items || []) {
+    const price = Number(it.price || 0)
+    const gst = Number(it.gst_percentage || 0)
+    const sgst = Number(it.sgst_percentage || 0)
+    subtotal += price
+    tax += price * ((gst + sgst) / 100)
+  }
+  return {
+    subtotal,
+    tax,
+    total: subtotal + tax,
+  }
+}
 
 export default function BillingPage() {
-  const today = fmt(new Date());
-  // Get completed appointments for today that are not yet billed
-  const { data: appts, mutate } = useSWR(`/api/billing/today-completed`, fetcher);
-  const [selected, setSelected] = useState<any>(null);
+  const { data: appts, mutate } = useSWR(`/api/billing/today-completed`, fetcher)
+  const [selected, setSelected] = useState<any>(null)
+  const [openId, setOpenId] = useState<number | null>(null)
 
   return (
-    <main className="min-h-screen bg-gradient-to-tr from-green-100 via-blue-50 to-pink-100 p-0 flex flex-col">
-      <h1 className="text-2xl font-bold text-blue-700 px-4 py-4">Billing - Today's Completed Appointments</h1>
+    <main className="min-h-screen bg-background p-0 flex flex-col">
+      <h1 className="text-2xl font-bold text-green-700 px-4 py-4">Billing - Today&apos;s Completed Appointments</h1>
       <section className="px-4">
         {(Array.isArray(appts) ? appts : []).length === 0 && (
-          <p className="text-center mt-12 text-gray-400 text-base animate-pulse">No completed appointments to bill today</p>
+          <p className="text-center mt-12 text-gray-400 text-base">No completed appointments to bill today</p>
         )}
-        {(Array.isArray(appts) ? appts : []).map((a: any) => (
-          <div key={a.id} className="bg-white rounded-xl shadow mb-3 p-4 flex justify-between items-center">
-            <div>
-              <div className="font-bold text-base text-blue-700">{a.customer_name}</div>
-              <div className="text-xs text-gray-400 mb-1">
-                {new Date(a.scheduled_start).toLocaleDateString()} • {new Date(a.scheduled_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} • {a.status}
-              </div>
-              <div className="text-sm text-gray-600">Total: ₹{a.total_amount || "-"}</div>
+        {(Array.isArray(appts) ? appts : []).map((a: any) => {
+          const isOpen = openId === a.id
+          return (
+            <div key={a.id} className="bg-card rounded-xl shadow mb-3">
+              <button
+                className="w-full flex items-center justify-between p-4"
+                onClick={() => setOpenId(isOpen ? null : a.id)}
+              >
+                <div className="text-left">
+                  <div className="font-semibold text-foreground">{a.customer_name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(a.scheduled_start).toLocaleDateString()} •{" "}
+                    {new Date(a.scheduled_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} •{" "}
+                    {a.status}
+                  </div>
+                </div>
+                {isOpen ? (
+                  <ChevronUp className="text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="text-muted-foreground" />
+                )}
+              </button>
+
+              {isOpen ? <AppointmentServicesPanel appointment={a} onPaid={() => mutate()} /> : null}
             </div>
-            <button
-              className="bg-green-600 text-white px-4 py-2 rounded font-bold"
-              onClick={() => setSelected(a)}
-            >
-              Bill
-            </button>
-          </div>
-        ))}
+          )
+        })}
       </section>
+
       {selected && (
         <BillingModal
           appointment={selected}
           onClose={() => setSelected(null)}
           onSaved={() => {
-            setSelected(null);
-            mutate();
+            setSelected(null)
+            mutate()
           }}
         />
       )}
     </main>
-  );
+  )
 }
 
-// Billing Modal for finishing billing
+function AppointmentServicesPanel({ appointment, onPaid }: { appointment: any; onPaid: () => void }) {
+  const { data: items, isLoading } = useActuals(appointment.id, true)
+  const totals = computeTotals(items || [])
+  const [showModal, setShowModal] = useState(false)
+
+  return (
+    <div className="px-4 pb-4">
+      <div className="rounded-lg border bg-background">
+        {isLoading ? (
+          <div className="p-3 text-sm text-muted-foreground">Loading services…</div>
+        ) : Array.isArray(items) && items.length > 0 ? (
+          <ul className="divide-y">
+            {items.map((it: any) => {
+              const price = Number(it.price || 0)
+              const gst = Number(it.gst_percentage || 0)
+              const sgst = Number(it.sgst_percentage || 0)
+              const lineTax = price * ((gst + sgst) / 100)
+              const lineTotal = price + lineTax
+              return (
+                <li key={it.id} className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-foreground">{it.service_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        GST {gst}% • SGST {sgst}%
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-foreground">₹{lineTotal.toFixed(2)}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Base ₹{price.toFixed(2)} • Tax ₹{lineTax.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  {it.notes ? <div className="mt-1 text-xs text-muted-foreground">Note: {it.notes}</div> : null}
+                </li>
+              )
+            })}
+          </ul>
+        ) : (
+          <div className="p-3 text-sm text-muted-foreground">No services recorded.</div>
+        )}
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="rounded-md bg-muted p-2">
+          <div className="text-[11px] text-muted-foreground">Subtotal</div>
+          <div className="font-semibold text-foreground">₹{totals.subtotal.toFixed(2)}</div>
+        </div>
+        <div className="rounded-md bg-muted p-2">
+          <div className="text-[11px] text-muted-foreground">Tax</div>
+          <div className="font-semibold text-foreground">₹{totals.tax.toFixed(2)}</div>
+        </div>
+        <div className="rounded-md bg-muted p-2">
+          <div className="text-[11px] text-muted-foreground">Total Payable</div>
+          <div className="font-semibold text-foreground">₹{totals.total.toFixed(2)}</div>
+        </div>
+      </div>
+
+      <button
+        className="mt-3 w-full rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground"
+        onClick={() => setShowModal(true)}
+      >
+        Pay
+      </button>
+
+      {showModal ? (
+        <BillingModal
+          appointment={{ ...appointment, computed_total: totals.total }}
+          onClose={() => setShowModal(false)}
+          onSaved={() => {
+            setShowModal(false)
+            onPaid()
+          }}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+// Billing Modal
 function BillingModal({ appointment, onClose, onSaved }) {
-  const { data: actuals } = useSWR(`/api/appointments/${appointment.id}/actual-services`, fetcher);
+  const { data: actuals } = useSWR(`/api/appointments/${appointment.id}/actual-services`, fetcher)
   const [form, setForm] = useState({
     total_amount: "",
     paid_amount: "",
     payment_method: "",
     payment_status: "pending",
     notes: "",
-  });
-  const [saving, setSaving] = useState(false);
+  })
+  const [saving, setSaving] = useState(false)
 
   React.useEffect(() => {
-    if (actuals && !form.total_amount) {
-      const sum = actuals.reduce((acc, s) => acc + (Number(s.price) || 0), 0);
-      setForm(f => ({ ...f, total_amount: sum ? String(sum) : "" }));
+    if (appointment?.computed_total && !form.total_amount) {
+      setForm((f) => ({ ...f, total_amount: String(appointment.computed_total) }))
+    } else if (Array.isArray(actuals) && !form.total_amount) {
+      const sum = actuals.reduce((acc, s) => acc + (Number(s.price) || 0), 0)
+      setForm((f) => ({ ...f, total_amount: sum ? String(sum) : "" }))
     }
-  }, [actuals]);
+  }, [appointment?.computed_total, actuals])
 
   async function handleSave(e) {
-    e.preventDefault();
-    setSaving(true);
+    e.preventDefault()
+    setSaving(true)
     await fetch(`/api/appointments/${appointment.id}/billing`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
-        appointment_actualtaken_services_Id: actuals?.[0]?.id || null, // or handle as needed
+        appointment_actualtaken_services_Id: actuals?.[0]?.id || null,
       }),
-    });
-    setSaving(false);
-    if (onSaved) onSaved();
+    })
+    setSaving(false)
+    if (onSaved) onSaved()
   }
 
   return (
-    <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur flex items-center justify-center"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div
+      className="fixed inset-0 z-[300] bg-black/60 backdrop-blur flex items-center justify-center"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <form
         className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md flex flex-col gap-3"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         onSubmit={handleSave}
       >
         <div className="flex items-center justify-between mb-2">
@@ -106,7 +224,7 @@ function BillingModal({ appointment, onClose, onSaved }) {
             step="0.01"
             className="border rounded px-3 py-2 w-full"
             value={form.total_amount}
-            onChange={e => setForm(f => ({ ...f, total_amount: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, total_amount: e.target.value }))}
             required
           />
         </div>
@@ -117,7 +235,7 @@ function BillingModal({ appointment, onClose, onSaved }) {
             step="0.01"
             className="border rounded px-3 py-2 w-full"
             value={form.paid_amount}
-            onChange={e => setForm(f => ({ ...f, paid_amount: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, paid_amount: e.target.value }))}
           />
         </div>
         <div>
@@ -125,7 +243,7 @@ function BillingModal({ appointment, onClose, onSaved }) {
           <select
             className="border rounded px-3 py-2 w-full"
             value={form.payment_method}
-            onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, payment_method: e.target.value }))}
           >
             <option value="">Select</option>
             <option value="cash">Cash</option>
@@ -139,7 +257,7 @@ function BillingModal({ appointment, onClose, onSaved }) {
           <select
             className="border rounded px-3 py-2 w-full"
             value={form.payment_status}
-            onChange={e => setForm(f => ({ ...f, payment_status: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, payment_status: e.target.value }))}
           >
             <option value="pending">Pending</option>
             <option value="paid">Paid</option>
@@ -153,7 +271,7 @@ function BillingModal({ appointment, onClose, onSaved }) {
             className="border rounded px-3 py-2 w-full"
             rows={2}
             value={form.notes}
-            onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
           />
         </div>
         <button
@@ -165,5 +283,5 @@ function BillingModal({ appointment, onClose, onSaved }) {
         </button>
       </form>
     </div>
-  );
+  )
 }

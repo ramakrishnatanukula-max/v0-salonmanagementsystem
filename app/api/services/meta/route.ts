@@ -2,13 +2,21 @@ import { NextResponse } from "next/server"
 import { query } from "@/lib/db"
 
 type Category = { id: number; name: string }
-type Service = { id: number; name: string; category_id: number; price: string | number; duration_min: number | null }
+type Service = {
+  id: number
+  name: string
+  category_id: number
+  price: string | number
+  duration_min: number | null
+  gst_percentage?: number
+  sgst_percentage?: number
+}
 
 export async function GET() {
   try {
     const categories = await query<Category>("SELECT id, name FROM service_categories ORDER BY name")
     const services = await query<Service>(
-      "SELECT id, name, category_id, price, duration_min FROM services ORDER BY name",
+      "SELECT id, name, category_id, price, duration_min, gst_percentage, sgst_percentage FROM services ORDER BY name",
     )
 
     const grouped = categories.map((c) => ({

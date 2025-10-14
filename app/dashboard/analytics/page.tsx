@@ -3,20 +3,17 @@
 import useSWR from "swr"
 import { useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts"
+  Chart as ChartJSCore,
+  ArcElement,
+  Tooltip as ChartJSTooltip,
+  Legend as ChartJSLegend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+} from "chart.js"
+import { Pie as PieChartJS, Bar as BarChartJS } from "react-chartjs-2"
+ChartJSCore.register(ArcElement, ChartJSTooltip, ChartJSLegend, CategoryScale, LinearScale, BarElement)
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
@@ -34,7 +31,6 @@ function monthBounds(d: Date) {
 }
 
 export default function AnalyticsPage() {
-  // Filters
   const [mode, setMode] = useState<"today" | "thisMonth" | "lastMonth" | "day" | "month">("today")
   const [day, setDay] = useState<string>(() => fmtDate(new Date()))
   const [month, setMonth] = useState<string>(() => {
@@ -60,7 +56,6 @@ export default function AnalyticsPage() {
     if (mode === "day") {
       return { from: day, to: day, title: `Day: ${day}` }
     }
-    // mode === "month"
     const [y, m] = month.split("-").map(Number)
     const base = new Date(y, (m || 1) - 1, 1)
     const { from, to } = monthBounds(base)
@@ -73,23 +68,78 @@ export default function AnalyticsPage() {
   const topServices = Array.isArray(data?.topServices) ? data.topServices : []
   const staff = Array.isArray(data?.staff) ? data.staff : []
 
-  const COLORS = [
+  const CHART_COLORS = [
     "hsl(var(--chart-1))",
     "hsl(var(--chart-2))",
     "hsl(var(--chart-3))",
     "hsl(var(--chart-4))",
     "hsl(var(--chart-5))",
-    "#14b8a6", // teal accent
   ]
+
+  const pieData = {
+    labels: (statusData || []).map((s: any) => s.status),
+    datasets: [
+      {
+        label: "Count",
+        data: (statusData || []).map((s: any) => Number(s.count || 0)),
+        backgroundColor: (statusData || []).map((_: any, i: number) => CHART_COLORS[i % CHART_COLORS.length]),
+        borderWidth: 0,
+      },
+    ],
+  }
+  const pieOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: "bottom" as const } },
+  }
+
+  const topServicesData = {
+    labels: (topServices || []).map((t: any) => t.name),
+    datasets: [
+      {
+        label: "Count",
+        data: (topServices || []).map((t: any) => Number(t.count || 0)),
+        backgroundColor: "hsl(var(--chart-2))",
+        borderWidth: 0,
+      },
+    ],
+  }
+  const barOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { ticks: { display: false } }, y: { ticks: { precision: 0 } } },
+  }
+
+  const staffServicesData = {
+    labels: (staff || []).map((s: any) => s.name),
+    datasets: [
+      {
+        label: "Services",
+        data: (staff || []).map((s: any) => Number(s.services_count || 0)),
+        backgroundColor: "hsl(var(--chart-3))",
+        borderWidth: 0,
+      },
+    ],
+  }
+  const staffRevenueData = {
+    labels: (staff || []).map((s: any) => s.name),
+    datasets: [
+      {
+        label: "Revenue",
+        data: (staff || []).map((s: any) => Number(s.revenue || 0)),
+        backgroundColor: "hsl(var(--chart-4))",
+        borderWidth: 0,
+      },
+    ],
+  }
 
   return (
     <main className="min-h-dvh p-4 md:p-6 space-y-6">
       <header className="space-y-2">
-        {/* neutral heading */}
         <h1 className="text-2xl md:text-3xl font-semibold text-balance text-gray-900">Analytics</h1>
         <p className="text-sm text-gray-600">Insights for {title}</p>
 
-        {/* Filters - Mobile first */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
           <button
             onClick={() => setMode("today")}
@@ -122,7 +172,6 @@ export default function AnalyticsPage() {
             Last Month
           </button>
 
-          {/* Pick a Day */}
           <label className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white text-indigo-700 border-indigo-200">
             <span className="text-xs font-semibold">Pick Day</span>
             <input
@@ -136,7 +185,6 @@ export default function AnalyticsPage() {
             />
           </label>
 
-          {/* Pick a Month */}
           <label className="flex items-center gap-2 px-3 py-2 rounded-md border bg-white text-indigo-700 border-indigo-200 md:col-auto col-span-2">
             <span className="text-xs font-semibold">Pick Month</span>
             <input
@@ -152,7 +200,6 @@ export default function AnalyticsPage() {
         </div>
       </header>
 
-      {/* KPIs - neutral text (colors only in charts) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="border-gray-200">
           <CardHeader>
@@ -182,107 +229,56 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Status Breakdown (Pie) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-gray-900">Status Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* smaller height on mobile */}
           <div className="h-[220px] md:h-[260px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={statusData.map((s: any) => ({ name: s.status, value: s.count }))}
-                  innerRadius={50}
-                  outerRadius={80}
-                  dataKey="value"
-                  nameKey="name"
-                >
-                  {statusData.map((_: any, idx: number) => (
-                    <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            <PieChartJS data={pieData} options={pieOptions} />
           </div>
         </CardContent>
       </Card>
 
-      {/* Top Services */}
       <Card>
         <CardHeader>
           <CardTitle className="text-gray-900">Top Services</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer
-            config={{ count: { label: "Count", color: "hsl(var(--chart-2))" } }}
-            className="h-[240px] md:h-[280px]"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topServices} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" hide />
-                <YAxis allowDecimals={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Legend />
-                <Bar dataKey="count" fill="var(--color-count)" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+          <div className="h-[240px] md:h-[280px]">
+            <BarChartJS data={topServicesData} options={barOptions} />
+          </div>
           <div className="mt-2 text-xs text-gray-600">
-            {topServices.map((s: any) => s.name).join(", ") || "No services in range"}
+            {(topServices || []).map((s: any) => s.name).join(", ") || "No services in range"}
           </div>
         </CardContent>
       </Card>
 
-      {/* Staff Analytics - Services */}
       <Card>
         <CardHeader>
           <CardTitle className="text-gray-900">Staff — Services Performed</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer
-            config={{ services_count: { label: "Services", color: "hsl(var(--chart-3))" } }}
-            className="h-[240px] md:h-[300px]"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={staff} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" hide />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="services_count" fill="var(--color-services_count)" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+          <div className="h-[240px] md:h-[300px]">
+            <BarChartJS data={staffServicesData} options={barOptions} />
+          </div>
         </CardContent>
       </Card>
 
-      {/* Staff Analytics - Revenue */}
       <Card>
         <CardHeader>
           <CardTitle className="text-gray-900">Staff — Revenue</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer
-            config={{ revenue: { label: "Revenue", color: "hsl(var(--chart-4))" } }}
-            className="h-[240px] md:h-[300px]"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={staff} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" hide />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="revenue" fill="var(--color-revenue)" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+          <div className="h-[240px] md:h-[300px]">
+            <BarChartJS
+              data={staffRevenueData}
+              options={{
+                ...barOptions,
+                scales: { x: { ticks: { display: false } }, y: { ticks: { callback: (v: any) => `₹${v}` } } },
+              }}
+            />
+          </div>
         </CardContent>
       </Card>
     </main>
