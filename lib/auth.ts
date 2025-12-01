@@ -51,7 +51,7 @@ export async function setSessionCookie(token: string) {
   // HttpOnly, Secure in prod
   jar.set("session", token, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,

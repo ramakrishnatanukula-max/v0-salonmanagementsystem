@@ -21,23 +21,23 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     category_id = null,
     description = null,
     duration_minutes = 30,
-    base_price = 0,
+    price = 0,
+    gst_percentage = 0,
     is_active = 1,
-    allow_addons = 1,
   } = body || {}
 
   if (!name || typeof name !== "string") return NextResponse.json({ error: "Name required" }, { status: 400 })
 
   await query(
-    `UPDATE services SET name = ?, category_id = ?, description = ?, duration_minutes = ?, base_price = ?, is_active = ?, allow_addons = ? WHERE id = ?`,
+    `UPDATE services SET name = ?, category_id = ?, description = ?, duration_minutes = ?, price = ?, gst_percentage = ?, is_active = ? WHERE id = ?`,
     [
       name.trim(),
       category_id ? Number(category_id) : null,
       description,
       Number(duration_minutes),
-      Number(base_price),
+      Number(price),
+      Number(gst_percentage),
       Number(is_active ? 1 : 0),
-      Number(allow_addons ? 1 : 0),
       id,
     ],
   )

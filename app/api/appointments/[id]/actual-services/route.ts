@@ -20,8 +20,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   const rows = await query<any>(
     `SELECT aas.*, 
             s.name AS service_name,
-            s.gst_percentage,
-            s.sgst_percentage
+            s.gst_percentage
      FROM appointment_actualtaken_services aas
      LEFT JOIN services s ON aas.service_id = s.id
      WHERE aas.appointment_id = ?

@@ -20,13 +20,16 @@ export default function LoginForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mobile, password }),
+        credentials: "include",
       });
+      
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
+      
+      // Redirect to appointments dashboard
       router.replace("/dashboard/appointments");
     } catch (err: any) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   }
@@ -108,13 +111,6 @@ export default function LoginForm() {
         {loading && <Loader2 className="animate-spin" size={20} />}
         {loading ? "Signing in..." : "Sign in"}
       </button>
-
-      <p className="text-sm text-center text-gray-600 select-none">
-        New here?{" "}
-        <a href="/signup" className="underline text-indigo-600 hover:text-indigo-700">
-          Create account
-        </a>
-      </p>
     </form>
   );
 }

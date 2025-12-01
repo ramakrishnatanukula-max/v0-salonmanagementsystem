@@ -6,14 +6,44 @@ export async function GET(req: Request) {
   const date = searchParams.get("date") // YYYY-MM-DD
   const where = date ? "WHERE DATE(a.scheduled_start)=?" : ""
   const rows = await query<any>(
-    `SELECT a.*, CONCAT(c.first_name,' ',c.last_name) AS customer_name
+    `SELECT a.*, 
+            CONCAT(c.first_name,' ',c.last_name) AS customer_name,
+            c.phone,
+            c.email,
+            ab.id as billing_id,
+            ab.total_amount,
+            ab.discount,
+            ab.final_amount,
+            ab.tax_amount,
+            ab.payment_method,
+            ab.payment_status,
+            ab.notes as billing_notes,
+            ab.updated_at as billing_date
      FROM appointments a
      JOIN customers c ON a.customer_id=c.id
+     LEFT JOIN appointment_billing ab ON ab.appointment_id=a.id
      ${where}
      ORDER BY a.scheduled_start ASC`,
     date ? [date] : [],
   )
-  return NextResponse.json(rows)
+  
+  // Transform to include billing object
+  const enrichedRows = (rows || []).map((row: any) => ({
+    ...row,
+    billing: row.billing_id ? {
+      id: row.billing_id,
+      total_amount: row.total_amount,
+      discount: row.discount,
+      final_amount: row.final_amount,
+      tax_amount: row.tax_amount,
+      payment_method: row.payment_method,
+      payment_status: row.payment_status,
+      notes: row.billing_notes,
+      updated_at: row.billing_date
+    } : null
+  }))
+  
+  return NextResponse.json(enrichedRows)
 }
 
 export async function POST(req: Request) {
@@ -27,22 +57,22 @@ export async function POST(req: Request) {
     selected_staffIds = [],
   } = body
 
-  if (!customer?.first_name || !customer?.last_name || !date || !time) {
+  if (!customer?.first_name || !date || !time) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
 
   // upsert customer by phone (if provided)
   let customerId: number | null = null
-  if (customer.phone) {
-    const existing = await query<any>("SELECT id FROM customers WHERE phone = ? ORDER BY id DESC LIMIT 1", [
-      customer.phone,
-    ])
-    if (existing.length) customerId = existing[0].id
-  }
+  // if (customer.phone) {
+  //   const existing = await query<any>("SELECT id FROM customers WHERE phone = ? ORDER BY id DESC LIMIT 1", [
+  //     customer.phone,
+  //   ])
+  //   if (existing.length) customerId = existing[0].id
+  // }
   if (!customerId) {
     const res: any = await execute("INSERT INTO customers (first_name,last_name,email,phone) VALUES (?,?,?,?)", [
       customer.first_name.trim(),
-      customer.last_name.trim(),
+      customer?.last_name?.trim() ?? ""  ,
       customer.email || null,
       customer.phone || null,
     ])

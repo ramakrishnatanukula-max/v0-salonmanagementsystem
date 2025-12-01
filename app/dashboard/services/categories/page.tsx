@@ -1,163 +1,84 @@
-// "use client"
-
-// import type React from "react"
-
-// import useSWR from "swr"
-// import { useState } from "react"
-
-// const fetcher = (url: string) => fetch(url).then((r) => r.json())
-
-// export default function CategoriesPage() {
-//   const { data: dataRaw, isLoading, mutate } = useSWR("/api/categories", fetcher)
-//   const data = Array.isArray(dataRaw) ? dataRaw : dataRaw ? [dataRaw] : []
-//   const [name, setName] = useState("")
-//   const [sort, setSort] = useState<number>(0)
-//   const [editingId, setEditingId] = useState<number | null>(null)
-//   const [editName, setEditName] = useState("")
-//   const [editSort, setEditSort] = useState<number>(0)
-//   const [err, setErr] = useState<string | null>(null)
-
-//   async function addCategory(e: React.FormEvent) {
-//     e.preventDefault()
-//     setErr(null)
-//     const res = await fetch("/api/categories", {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({ name, sort_order: sort }),
-//     })
-//     if (!res.ok) {
-//       const j = await res.json().catch(() => ({}))
-//       setErr(j.error || "Failed to add")
-//       return
-//     }
-//     setName("")
-//     setSort(0)
-//     mutate()
-//   }
-
-//   async function saveEdit(id: number) {
-//     const res = await fetch(`/api/categories/${id}`, {
-//       method: "PUT",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({ name: editName, sort_order: editSort }),
-//     })
-//     if (res.ok) {
-//       setEditingId(null)
-//       mutate()
-//     }
-//   }
-
-//   async function remove(id: number) {
-//     if (!confirm("Delete this category?")) return
-//     const res = await fetch(`/api/categories/${id}`, { method: "DELETE" })
-//     if (res.ok) mutate()
-//   }
-
-//   return (
-//     <main className="p-4 max-w-screen-sm mx-auto">
-//       <header className="mb-4">
-//         <h1 className="text-xl font-semibold text-pretty">Service Categories</h1>
-//         <p className="text-sm text-gray-500">Create, update, and delete categories.</p>
-//       </header>
-
-//       <section className="mb-6">
-//         <form onSubmit={addCategory} className="flex flex-col gap-2">
-//           {err && <p className="text-red-600 text-sm">{err}</p>}
-//           <input
-//             className="border rounded px-3 py-2 text-sm"
-//             placeholder="Category name"
-//             value={name}
-//             onChange={(e) => setName(e.target.value)}
-//             required
-//           />
-//           <input
-//             className="border rounded px-3 py-2 text-sm"
-//             placeholder="Sort order"
-//             type="number"
-//             value={sort}
-//             onChange={(e) => setSort(Number(e.target.value))}
-//           />
-//           <button className="bg-black text-white rounded px-4 py-2 text-sm">Add Category</button>
-//         </form>
-//       </section>
-
-//       <section>
-//         {isLoading ? (
-//           <p className="text-sm text-gray-500">Loading...</p>
-//         ) : (
-//           <ul className="flex flex-col gap-2">
-//             {data.map((c: any) => (
-//               <li key={c.id} className="border rounded p-3">
-//                 {editingId === c.id ? (
-//                   <div className="flex flex-col gap-2">
-//                     <input
-//                       className="border rounded px-3 py-2 text-sm"
-//                       value={editName}
-//                       onChange={(e) => setEditName(e.target.value)}
-//                     />
-//                     <input
-//                       className="border rounded px-3 py-2 text-sm"
-//                       type="number"
-//                       value={editSort}
-//                       onChange={(e) => setEditSort(Number(e.target.value))}
-//                     />
-//                     <div className="flex gap-2">
-//                       <button
-//                         type="button"
-//                         onClick={() => saveEdit(c.id)}
-//                         className="bg-black text-white rounded px-3 py-2 text-sm"
-//                       >
-//                         Save
-//                       </button>
-//                       <button
-//                         type="button"
-//                         onClick={() => setEditingId(null)}
-//                         className="border rounded px-3 py-2 text-sm"
-//                       >
-//                         Cancel
-//                       </button>
-//                     </div>
-//                   </div>
-//                 ) : (
-//                   <div className="flex items-center justify-between">
-//                     <div>
-//                       <p className="font-medium">{c.name}</p>
-//                       <p className="text-xs text-gray-500">Sort: {c.sort_order}</p>
-//                     </div>
-//                     <div className="flex gap-2">
-//                       <button
-//                         className="border rounded px-3 py-2 text-sm"
-//                         onClick={() => {
-//                           setEditingId(c.id)
-//                           setEditName(c.name)
-//                           setEditSort(c.sort_order)
-//                         }}
-//                       >
-//                         Edit
-//                       </button>
-//                       <button className="text-red-600 text-sm" onClick={() => remove(c.id)}>
-//                         Delete
-//                       </button>
-//                     </div>
-//                   </div>
-//                 )}
-//               </li>
-//             ))}
-//           </ul>
-//         )}
-//       </section>
-//     </main>
-//   )
-// }
-
-
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import useSWR from "swr";
-import { Plus, X, AlertTriangle, Check } from "lucide-react";
+import { Plus, X, AlertTriangle, Check, AlertCircle, CheckCircle2, Loader, Info } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+// Toast Notification Component
+function Toast({
+  type,
+  message,
+  onClose,
+}: {
+  type: "success" | "error" | "info";
+  message: string;
+  onClose: () => void;
+}) {
+  React.useEffect(() => {
+    const timer = setTimeout(onClose, 4000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const config = {
+    success: {
+      bg: "bg-gradient-to-r from-emerald-500 to-green-500",
+      border: "border-l-4 border-emerald-600",
+      icon: <CheckCircle2 size={20} className="flex-shrink-0" />,
+    },
+    error: {
+      bg: "bg-gradient-to-r from-red-500 to-rose-500",
+      border: "border-l-4 border-red-600",
+      icon: <AlertCircle size={20} className="flex-shrink-0" />,
+    },
+    info: {
+      bg: "bg-gradient-to-r from-blue-500 to-cyan-500",
+      border: "border-l-4 border-blue-600",
+      icon: <Info size={20} className="flex-shrink-0" />,
+    },
+  };
+
+  const { bg, border, icon } = config[type];
+
+  return (
+    <div
+      className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm ${bg} ${border} text-white rounded-lg shadow-xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 z-[999]`}
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+    >
+      {icon}
+      <span className="text-sm font-medium flex-grow">{message}</span>
+      <button
+        onClick={onClose}
+        className="ml-2 hover:opacity-70 transition flex-shrink-0"
+        aria-label="Close notification"
+        type="button"
+      >
+        <X size={18} />
+      </button>
+    </div>
+  );
+}
+
+// Loading Skeleton Component
+function CategorySkeleton() {
+  return (
+    <div className="bg-white rounded-xl p-4 shadow-md animate-pulse">
+      <div className="flex justify-between items-center gap-3">
+        <div className="flex-grow space-y-2">
+          <div className="h-5 bg-gray-200 rounded-lg w-3/4"></div>
+          <div className="h-3 bg-gray-100 rounded-lg w-1/2"></div>
+        </div>
+        <div className="space-y-2">
+          <div className="h-8 bg-gray-200 rounded-lg w-16"></div>
+          <div className="h-6 bg-gray-100 rounded-lg w-12"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CategoriesPage() {
   const { data: dataRaw, isLoading, mutate } = useSWR("/api/categories", fetcher);
@@ -167,54 +88,96 @@ export default function CategoriesPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editCategory, setEditCategory] = useState<any | null>(null);
   const [deleteCategoryId, setDeleteCategoryId] = useState<number | null>(null);
+  const [toastConfig, setToastConfig] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showHeader, setShowHeader] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setShowHeader(currentScrollY <= lastScrollY || currentScrollY <= 10);
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   async function handleDelete(id: number) {
     if (!id) return;
-    const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setDeleteCategoryId(null);
-      mutate();
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setDeleteCategoryId(null);
+        setToastConfig({ type: "success", message: "Category deleted successfully! ✓" });
+        await mutate();
+      } else {
+        setToastConfig({ type: "error", message: "Failed to delete category. Please try again." });
+      }
+    } catch (err) {
+      setToastConfig({ type: "error", message: "Error deleting category. Please try again." });
+    } finally {
+      setIsDeleting(false);
     }
   }
 
   return (
-    <main className="p-5 max-w-screen-sm mx-auto relative min-h-screen bg-gradient-to-tr from-green-50 via-blue-50 to-pink-50">
-      <header className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-wide text-indigo-700 mb-1">Service Categories</h1>
-        <p className="text-sm text-gray-500">Create, update, and delete categories.</p>
+    <main className="p-4 max-w-sm mx-auto relative min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50">
+      {/* Header */}
+      <header
+        className={`mb-6 sticky top-4 z-10 bg-white/80 backdrop-blur-md rounded-xl p-4 shadow-sm transition-all duration-300 transform ${
+          showHeader ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
+        }`}
+      >
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent mb-1">
+          Service Categories
+        </h1>
+        <p className="text-sm text-gray-500">Organize your salon services</p>
       </header>
 
-      <section className="flex flex-col gap-3 mb-28">
+      {/* Categories List */}
+      <section className="flex flex-col gap-3 mb-32">
         {isLoading ? (
-          <p className="text-sm text-gray-400 text-center">Loading...</p>
+          <>
+            <CategorySkeleton />
+            <CategorySkeleton />
+            <CategorySkeleton />
+          </>
         ) : data.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center">No categories found.</p>
+          <div className="text-center py-12">
+            <AlertCircle className="mx-auto text-gray-300 mb-3" size={48} />
+            <p className="text-gray-500 font-medium">No categories yet</p>
+            <p className="text-gray-400 text-sm mt-1">Tap the + button to create your first category</p>
+          </div>
         ) : (
           data.map((c) => (
             <article
               key={c.id}
-              className="bg-white rounded-xl p-4 shadow-md flex justify-between items-center hover:shadow-lg transition-shadow"
+              className="bg-white rounded-xl p-4 shadow-md hover:shadow-xl transition-all duration-200 border border-gray-100 hover:border-purple-200 hover:-translate-y-0.5"
               aria-label={`Category ${c.name}`}
             >
-              <div>
-                <p className="font-semibold text-base text-indigo-800">{c.name}</p>
-                <p className="text-xs text-gray-400 mt-1 select-none">Sort order: {c.sort_order}</p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  aria-label={`Edit category ${c.name}`}
-                  className="border rounded-lg px-3 py-1 text-sm bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold shadow-sm transition"
-                  onClick={() => setEditCategory(c)}
-                >
-                  Edit
-                </button>
-                <button
-                  aria-label={`Delete category ${c.name}`}
-                  className="flex items-center gap-1 text-red-600 font-semibold hover:text-red-700 focus:outline-none"
-                  onClick={() => setDeleteCategoryId(c.id)}
-                >
-                  <AlertTriangle size={16} /> Delete
-                </button>
+              <div className="flex justify-between items-center gap-3">
+                <div className="flex-grow">
+                  <p className="font-semibold text-lg text-gray-900">{c.name}</p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <button
+                    aria-label={`Edit category ${c.name}`}
+                    className="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-sm transition-all active:scale-95"
+                    onClick={() => setEditCategory(c)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    aria-label={`Delete category ${c.name}`}
+                    className="text-red-600 hover:text-red-700 font-semibold text-sm hover:bg-red-50 px-2 py-1 rounded-lg transition"
+                    onClick={() => setDeleteCategoryId(c.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </article>
           ))
@@ -225,40 +188,51 @@ export default function CategoriesPage() {
       <button
         onClick={() => setShowAddForm(true)}
         aria-label="Add new category"
-        style={{ bottom: "14%" }}
-        className="fixed bottom-10 right-7 z-50 bg-gradient-to-tr from-indigo-600 to-green-500 p-3.5 rounded-full shadow-2xl text-white text-3xl drop-shadow-md hover:scale-105 active:scale-95 transition-transform flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-indigo-300"
+        className="fixed bottom-20 sm:bottom-8 right-6 z-50 bg-gradient-to-tr from-indigo-600 to-emerald-500 p-4 rounded-full shadow-2xl text-white hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-300 flex items-center justify-center group"
       >
-        <Plus size={24} />
+        <Plus size={28} className="group-hover:rotate-90 transition-transform duration-300" />
       </button>
 
-      {/* Add Category Modal */}
+      {/* Modals */}
       {showAddForm && (
         <CategoryFormModal
           onClose={() => setShowAddForm(false)}
           onSuccess={() => {
             setShowAddForm(false);
+            setToastConfig({ type: "success", message: "Category created successfully! ✓" });
             mutate();
           }}
+          onError={(msg) => setToastConfig({ type: "error", message: msg })}
         />
       )}
 
-      {/* Edit Category Modal */}
       {editCategory && (
         <CategoryFormModal
           initialData={editCategory}
           onClose={() => setEditCategory(null)}
           onSuccess={() => {
             setEditCategory(null);
+            setToastConfig({ type: "success", message: "Category updated successfully! ✓" });
             mutate();
           }}
+          onError={(msg) => setToastConfig({ type: "error", message: msg })}
         />
       )}
 
-      {/* Delete Confirm Modal */}
       {deleteCategoryId !== null && (
         <DeleteConfirmModal
           onConfirm={() => handleDelete(deleteCategoryId)}
           onCancel={() => setDeleteCategoryId(null)}
+          isLoading={isDeleting}
+        />
+      )}
+
+      {/* Toast Notification */}
+      {toastConfig && (
+        <Toast
+          type={toastConfig.type}
+          message={toastConfig.message}
+          onClose={() => setToastConfig(null)}
         />
       )}
     </main>
@@ -269,29 +243,41 @@ function CategoryFormModal({
   initialData = null,
   onClose,
   onSuccess,
+  onError,
 }: {
   initialData?: any;
   onClose: () => void;
   onSuccess: () => void;
+  onError?: (msg: string) => void;
 }) {
   const [form, setForm] = useState(() =>
     initialData
       ? {
           name: initialData.name ?? "",
-          sort_order: initialData.sort_order ?? 0,
         }
       : {
           name: "",
-          sort_order: 0,
         }
   );
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!form.name.trim()) newErrors.name = "Category name is required";
+    return newErrors;
+  };
 
   const submitHandler = async (e: React.FormEvent) => {
     e.preventDefault();
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      onError?.("Please fix the errors in the form");
+      return;
+    }
+
     setLoading(true);
-    setErr(null);
     try {
       const url = initialData ? `/api/categories/${initialData.id}` : "/api/categories";
       const method = initialData ? "PUT" : "POST";
@@ -300,15 +286,17 @@ function CategoryFormModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name.trim(),
-          sort_order: Number(form.sort_order),
         }),
       });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        setErr(j.error || "Failed to save category");
-      } else {
+
+      if (res.ok) {
         onSuccess();
+      } else {
+        const error = await res.json().catch(() => ({}));
+        onError?.(error.error || "Failed to save category. Please try again.");
       }
+    } catch (err) {
+      onError?.("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -316,55 +304,67 @@ function CategoryFormModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-gradient-to-tr from-black/60 via-black/50 to-black/60 backdrop-blur-sm flex flex-col p-5"
+      className="fixed inset-0 z-50 bg-gradient-to-tr from-black/70 via-black/50 to-black/70 backdrop-blur-sm flex flex-col p-4 items-center justify-center sm:justify-start sm:pt-12"
       onClick={onClose}
     >
       <form
         onSubmit={submitHandler}
-        className="bg-white rounded-xl shadow-xl p-6 max-w-xs mx-auto flex flex-col gap-4 overflow-y-auto relative"
+        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4 overflow-y-auto max-h-[90vh] relative"
         onClick={(e) => e.stopPropagation()}
         aria-label={initialData ? "Edit category form" : "Add category form"}
+        noValidate
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close form"
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 transition"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition p-1 hover:bg-gray-100 rounded-lg"
         >
-          <X size={26} />
+          <X size={24} />
         </button>
 
-        <h2 className="text-xl font-extrabold text-indigo-700 mb-3 text-center">
-          {initialData ? "Edit Category" : "Add Category"}
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent text-center mb-2">
+          {initialData ? "✏️ Edit Category" : "➕ Add New Category"}
         </h2>
 
-        {err && <p className="text-red-600 text-center font-semibold">{err}</p>}
+        {/* Category Name */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Category Name *</label>
+          <input
+            className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 transition ${
+              errors.name
+                ? "border-red-400 focus:ring-red-300 bg-red-50"
+                : "border-gray-300 focus:ring-indigo-400 focus:border-indigo-400"
+            }`}
+            placeholder="e.g., Hair Services, Massage"
+            value={form.name}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, name: e.target.value }));
+              if (errors.name) setErrors((e) => ({ ...e, name: "" }));
+            }}
+            required
+            autoFocus
+            spellCheck={false}
+          />
+          {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+        </div>
 
-        <input
-          className="border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-indigo-400 focus:ring-2 transition"
-          placeholder="Category name"
-          value={form.name}
-          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          required
-          spellCheck={false}
-          autoFocus
-        />
-        <input
-          type="number"
-          className="border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-indigo-400 focus:ring-2 transition"
-          placeholder="Sort order"
-          value={form.sort_order}
-          onChange={(e) => setForm((f) => ({ ...f, sort_order: Number(e.target.value) }))}
-          min={0}
-          required
-        />
-
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={loading}
-          className="bg-gradient-to-tr from-indigo-700 to-green-500 text-white rounded-lg py-3 font-extrabold shadow-lg hover:brightness-105 transition"
+          className="bg-gradient-to-r from-indigo-600 to-emerald-600 text-white rounded-lg py-3 font-bold shadow-lg hover:shadow-xl hover:brightness-110 disabled:opacity-70 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-2"
         >
-          {loading ? "Saving..." : initialData ? "Save Changes" : "Add Category"}
+          {loading ? (
+            <>
+              <Loader size={18} className="animate-spin" />
+              {initialData ? "Saving..." : "Creating..."}
+            </>
+          ) : (
+            <>
+              {initialData ? "Save Changes" : "Add Category"}
+            </>
+          )}
         </button>
       </form>
     </div>
@@ -374,48 +374,62 @@ function CategoryFormModal({
 function DeleteConfirmModal({
   onConfirm,
   onCancel,
+  isLoading,
 }: {
   onConfirm: () => void;
   onCancel: () => void;
+  isLoading?: boolean;
 }) {
   return (
     <div
-      className="fixed inset-0 z-60 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+      className="fixed inset-0 z-60 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onCancel}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl p-6 max-w-xs w-full flex flex-col items-center gap-5"
+        className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col items-center gap-4 animate-in fade-in scale-in duration-300"
         onClick={(e) => e.stopPropagation()}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="delete-confirm-title"
         aria-describedby="delete-confirm-desc"
       >
-        <AlertTriangle className="text-red-700" size={52} strokeWidth={1.8} />
+        <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
+          <AlertTriangle className="text-red-600" size={32} strokeWidth={1.5} />
+        </div>
+
         <h3
           id="delete-confirm-title"
-          className="text-2xl font-extrabold text-center text-gray-900 select-none tracking-wide"
+          className="text-xl font-bold text-center text-gray-900 tracking-tight"
         >
-          Confirm Deletion
+          Delete Category?
         </h3>
-        <p
-          id="delete-confirm-desc"
-          className="text-center text-gray-700 leading-relaxed"
-        >
-          Are you sure you want to delete this category? This action cannot be undone.
+
+        <p id="delete-confirm-desc" className="text-center text-gray-600 text-sm leading-relaxed">
+          This action cannot be undone. The category will be permanently removed.
         </p>
-        <div className="flex gap-5 w-full">
+
+        <div className="flex gap-3 w-full pt-2">
           <button
             onClick={onCancel}
-            className="flex-1 border border-gray-300 rounded-lg py-3 text-gray-700 font-extrabold hover:bg-gray-100 transition"
+            disabled={isLoading}
+            className="flex-1 border border-gray-300 rounded-lg py-2.5 text-gray-700 font-bold hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 bg-red-600 text-white rounded-lg py-3 font-extrabold flex items-center justify-center gap-3 hover:bg-red-700 transition"
+            disabled={isLoading}
+            className="flex-1 bg-red-600 text-white rounded-lg py-2.5 font-bold flex items-center justify-center gap-2 hover:bg-red-700 transition disabled:opacity-70 disabled:cursor-not-allowed active:scale-95"
           >
-            <Check size={20} strokeWidth={1.8} /> Delete
+            {isLoading ? (
+              <>
+                <Loader size={18} className="animate-spin" /> Deleting...
+              </>
+            ) : (
+              <>
+                <Check size={18} strokeWidth={2} /> Delete
+              </>
+            )}
           </button>
         </div>
       </div>

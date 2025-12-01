@@ -14,24 +14,21 @@ export const metadata: Metadata = {
   generator: "v0.app",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  // Auth check (server component)
-  const cookieStore = cookies()
+  // Basic auth check - redirect to login if no valid token
+  const cookieStore = await cookies()
   const token = cookieStore.get("session")?.value
-  let isAuth = false
-  if (token) {
-    try {
-      verifyJWT(token)
-      isAuth = true
-    } catch {
-      isAuth = false
-    }
+  
+  if (!token) {
+    redirect("/login")
   }
-  if (!isAuth) {
+  
+  const payload = verifyJWT(token)
+  if (!payload) {
     redirect("/login")
   }
 

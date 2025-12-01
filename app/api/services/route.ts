@@ -21,9 +21,9 @@ export async function POST(req: Request) {
     category_id = null,
     description = null,
     duration_minutes = 30,
-    base_price = 0,
+    price = 0,
+    gst_percentage = 0,
     is_active = 1,
-    allow_addons = 1,
   } = body || {}
 
   if (!name || typeof name !== "string") {
@@ -31,14 +31,15 @@ export async function POST(req: Request) {
   }
 
   const result = await query(
-    `INSERT INTO services (name, category_id, description, duration_minutes, price, is_active)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO services (name, category_id, description, duration_minutes, price, gst_percentage, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       name.trim(),
       category_id ? Number(category_id) : null,
       description,
       Number(duration_minutes),
-      Number(base_price),
+      Number(price),
+      Number(gst_percentage),
       Number(is_active ? 1 : 0),
     ],
   )
