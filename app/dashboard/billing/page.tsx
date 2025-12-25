@@ -2,6 +2,8 @@
 import React, { useState } from "react"
 import useSWR from "swr"
 import { X, ChevronDown, ChevronUp, Mail, Check, AlertCircle } from "lucide-react"
+import Toast from "@/components/Toast"
+import LoadingSpinner from "@/components/LoadingSpinner"
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
@@ -27,56 +29,8 @@ function computeTotals(items: any[]) {
   }
 }
 
-// Toast Notification Component
-function Toast({
-  type,
-  message,
-  onClose,
-}: {
-  type: "success" | "error" | "info"
-  message: string
-  onClose: () => void
-}) {
-  React.useEffect(() => {
-    const timer = setTimeout(onClose, 4000)
-    return () => clearTimeout(timer)
-  }, [onClose])
-
-  const config = {
-    success: {
-      bg: "bg-gradient-to-r from-emerald-500 to-green-500",
-      border: "border-l-4 border-emerald-600",
-      icon: <Check size={20} className="flex-shrink-0" />,
-    },
-    error: {
-      bg: "bg-gradient-to-r from-red-500 to-rose-500",
-      border: "border-l-4 border-red-600",
-      icon: <AlertCircle size={20} className="flex-shrink-0" />,
-    },
-    info: {
-      bg: "bg-gradient-to-r from-blue-500 to-cyan-500",
-      border: "border-l-4 border-blue-600",
-      icon: <AlertCircle size={20} className="flex-shrink-0" />,
-    },
-  }
-
-  const { bg, border, icon } = config[type]
-
-  return (
-    <div
-      className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm ${bg} ${border} text-white rounded-lg shadow-xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 z-[999]`}
-      role="alert"
-      aria-live="assertive"
-      aria-atomic="true"
-    >
-      {icon}
-      <span className="text-sm font-medium">{message}</span>
-    </div>
-  )
-}
-
 export default function BillingPage() {
-  const { data: appts, mutate } = useSWR(`/api/billing/today-completed`, fetcher)
+  const { data: appts, mutate, isLoading } = useSWR(`/api/billing/today-completed`, fetcher)
   const [selected, setSelected] = useState<any>(null)
   const [openId, setOpenId] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<"all" | "paid">("all")
@@ -162,7 +116,9 @@ export default function BillingPage() {
 
       {/* Content */}
       <section className="flex-1 px-4 sm:px-6 py-4 max-w-4xl mx-auto w-full">
-        {appointmentsList.length === 0 && (
+        {isLoading && <LoadingSpinner message="Loading billing data..." />}
+        
+        {!isLoading && appointmentsList.length === 0 && (
           <div className="mt-12 text-center">
             <div className="text-6xl mb-4">📊</div>
             <p className="text-center text-gray-400 text-lg font-medium">No completed appointments to bill today</p>
@@ -170,6 +126,7 @@ export default function BillingPage() {
           </div>
         )}
 
+        {!isLoading && (
         <div className="space-y-3">
           {displayList.map((a: any) => {
             const isOpen = openId === a.id
@@ -235,6 +192,7 @@ export default function BillingPage() {
             )
           })}
         </div>
+        )}
       </section>
 
       {selected && (

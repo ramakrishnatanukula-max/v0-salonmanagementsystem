@@ -1,80 +1,46 @@
 "use client"
 import React, { useMemo, useState, useEffect } from "react"
 import useSWR from "swr"
-import { Pencil, Trash2, Plus, X, AlertCircle, CheckCircle2, AlertTriangle, Check, Loader, Info, Calendar, User, Clock, MessageSquare, CheckCircle, ClipboardList, Users } from "lucide-react"
+import { Pencil, Trash2, Plus, X, AlertCircle, CheckCircle2, AlertTriangle, Check, Loader, Info, Calendar, User, Clock, MessageSquare, CheckCircle, ClipboardList, Users, Search } from "lucide-react"
+import Toast from "@/components/Toast"
+import ConfirmDialog from "@/components/ConfirmDialog"
+import LoadingSpinner from "@/components/LoadingSpinner"
+import FamilyMemberSelector from "@/components/FamilyMemberSelector"
+import CategoryServiceSelector from "@/components/CategoryServiceSelector"
 
 const fetcher = (u) => fetch(u).then((r) => r.json())
 const fmt = (d) => d.toISOString().slice(0, 10)
 const fmtDisplay = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })
 
-// Toast Notification Component
-function Toast({
-  type,
-  message,
-  onClose,
-}: {
-  type: "success" | "error" | "info"
-  message: string
-  onClose: () => void
-}) {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 4000)
-    return () => clearTimeout(timer)
-  }, [onClose])
-
-  const config = {
-    success: {
-      bg: "bg-gradient-to-r from-emerald-500 to-green-500",
-      border: "border-l-4 border-emerald-600",
-      icon: <CheckCircle2 size={20} className="flex-shrink-0" />,
-    },
-    error: {
-      bg: "bg-gradient-to-r from-red-500 to-rose-500",
-      border: "border-l-4 border-red-600",
-      icon: <AlertCircle size={20} className="flex-shrink-0" />,
-    },
-    info: {
-      bg: "bg-gradient-to-r from-blue-500 to-cyan-500",
-      border: "border-l-4 border-blue-600",
-      icon: <Info size={20} className="flex-shrink-0" />,
-    },
-  }
-
-  const { bg, border, icon } = config[type]
-
-  return (
-    <div
-      className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm ${bg} ${border} text-white rounded-lg shadow-xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 z-[999]`}
-      role="alert"
-      aria-live="assertive"
-      aria-atomic="true"
-    >
-      {icon}
-      <span className="text-sm font-medium flex-grow">{message}</span>
-      <button
-        onClick={onClose}
-        className="ml-2 hover:opacity-70 transition flex-shrink-0"
-        aria-label="Close notification"
-        type="button"
-      >
-        <X size={18} />
-      </button>
-    </div>
-  )
-}
-
 export default function AppointmentsPage() {
   const [date, setDate] = useState(fmt(new Date()))
   const { data: appts, mutate, isLoading: apptsLoading } = useSWR(`/api/appointments?date=${date}`, fetcher)
   const { data: services, isLoading: servicesLoading } = useSWR("/api/services", fetcher)
+  const { data: categories, isLoading: categoriesLoading } = useSWR("/api/categories", fetcher)
   const { data: staff, isLoading: staffLoading } = useSWR("/api/staff", fetcher)
+  const { data: currentUser } = useSWR("/api/auth/me", fetcher)
   const [showForm, setShowForm] = useState(false)
   const [detailsId, setDetailsId] = useState(null)
   const [toastConfig, setToastConfig] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
   const scrollContainerRef = React.useRef<HTMLDivElement>(null)
 
-  const isLoading = apptsLoading || servicesLoading || staffLoading
+  const isLoading = apptsLoading || servicesLoading || categoriesLoading || staffLoading
+
+  // Find current staff member if user is staff role
+  const currentStaffMember = useMemo(() => {
+    if (currentUser?.role === 'staff' && Array.isArray(staff)) {
+      return staff.find(s => s.email === currentUser.email || 
+        (s.first_name === currentUser.first_name && s.last_name === currentUser.last_name))
+    }
+    return null
+  }, [currentUser, staff])
+
+  // Show all appointments to all users including staff
+  const filteredAppts = useMemo(() => {
+    if (!Array.isArray(appts)) return []
+    return appts
+  }, [appts])
 
   const serviceMap = useMemo(() => {
     const map = {}
@@ -110,20 +76,18 @@ export default function AppointmentsPage() {
   }, [])
 
   async function remove(id) {
-    if (!confirm("Delete this appointment?")) return
-    setIsDeleting(true)
     try {
       const res = await fetch(`/api/appointments/${id}`, { method: "DELETE" })
       if (res.ok) {
-        setToastConfig({ type: "success", message: "Appointment deleted successfully! ✓" })
+        setToastConfig({ type: "success", message: "Appointment deleted successfully!" })
         mutate()
       } else {
-        setToastConfig({ type: "error", message: "Failed to delete appointment. Please try again." })
+        setToastConfig({ type: "error", message: "Failed to delete appointment." })
       }
     } catch (err) {
-      setToastConfig({ type: "error", message: "Error deleting appointment. Please try again." })
+      setToastConfig({ type: "error", message: "Error deleting appointment." })
     } finally {
-      setIsDeleting(false)
+      setDeleteConfirm(null)
     }
   }
 
@@ -160,24 +124,15 @@ export default function AppointmentsPage() {
 
       {/* Appointments list */}
       <section className="flex-1 px-3 py-3 pb-24 overflow-auto">
-        {isLoading && (
-          <div className="flex flex-col items-center justify-center mt-12">
-            <div className="relative">
-              <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-              <Loader className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-indigo-600" size={24} />
-            </div>
-            <p className="text-gray-500 font-medium mt-4">Loading appointments...</p>
-            <p className="text-gray-400 text-sm mt-1">Please wait</p>
-          </div>
-        )}
-        {!isLoading && (Array.isArray(appts) ? appts : []).length === 0 && (
+        {isLoading && <LoadingSpinner message="Loading appointments..." />}
+        {!isLoading && filteredAppts.length === 0 && (
           <div className="text-center mt-12 px-4">
             <AlertCircle className="mx-auto text-gray-300 mb-3" size={48} />
             <p className="text-gray-500 font-medium">No appointments on this date</p>
             <p className="text-gray-400 text-sm mt-1">Tap the + button to create one</p>
           </div>
         )}
-        {!isLoading && (Array.isArray(appts) ? appts : []).map((a) => {
+        {!isLoading && filteredAppts.map((a) => {
           const isBilled = a.billing?.id
           return (
           <article
@@ -190,7 +145,10 @@ export default function AppointmentsPage() {
           >
             <div className="flex justify-between items-start gap-3">
               <div className="flex-grow min-w-0">
-                <p className={`font-semibold text-base truncate ${isBilled ? "text-gray-400" : "text-gray-900"}`}>{a.customer_name}</p>
+                <p className={`font-semibold text-base truncate ${isBilled ? "text-gray-400" : "text-gray-900"}`}>
+                  {a.customer_name}
+                  {a.family_member && <span className="text-sm font-normal text-purple-600"> → {a.family_member.name}</span>}
+                </p>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">
                     {new Date(a.scheduled_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -204,6 +162,11 @@ export default function AppointmentsPage() {
                   }`}>
                     {a.status}
                   </span>
+                  {a.family_member && (
+                    <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-medium">
+                      {a.family_member.age_group}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-gray-600 mt-2 line-clamp-1">
                   <span className="font-medium">Services:</span> {(a.selected_servicesIds || []).map((sid) => serviceMap[sid] || sid).join(", ") || "-"}
@@ -226,12 +189,13 @@ export default function AppointmentsPage() {
                     appointmentId={a.id}
                     services={services}
                     staff={staff}
+                    currentStaffMember={currentStaffMember}
                     onAdded={() => mutate()}
                   />
                 </div>
                 <button
                   className="text-red-600 hover:text-red-700 font-medium text-xs hover:bg-red-50 px-2 py-1 rounded-lg transition"
-                  onClick={() => remove(a.id)}
+                  onClick={() => setDeleteConfirm(a.id)}
                 >
                   Delete
                 </button>
@@ -243,19 +207,22 @@ export default function AppointmentsPage() {
         })}
       </section>
 
-      {/* Floating Add Button */}
-      <button
-        onClick={() => setShowForm(true)}
-        aria-label="Add new appointment"
-        className="fixed bottom-20 md:bottom-6 right-4 z-50 bg-gradient-to-tr from-indigo-600 to-emerald-500 p-3.5 rounded-full shadow-lg text-white hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-300 flex items-center justify-center group"
-      >
-        <Plus size={28} className="group-hover:rotate-90 transition-transform duration-300" />
-      </button>
+      {/* Floating Add Button - Hidden for staff role */}
+      {currentUser?.role !== 'staff' && (
+        <button
+          onClick={() => setShowForm(true)}
+          aria-label="Add new appointment"
+          className="fixed bottom-20 md:bottom-6 right-4 z-50 bg-gradient-to-tr from-indigo-600 to-emerald-500 p-3.5 rounded-full shadow-lg text-white hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-300 flex items-center justify-center group"
+        >
+          <Plus size={28} className="group-hover:rotate-90 transition-transform duration-300" />
+        </button>
+      )}
 
       {/* Form Modal */}
       {showForm && (
         <FormModalContainer
           services={services}
+          categories={categories}
           staff={staff}
           onClose={() => setShowForm(false)}
           onCreated={() => {
@@ -282,12 +249,25 @@ export default function AppointmentsPage() {
           onClose={() => setToastConfig(null)}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="Delete Appointment"
+          message="Are you sure you want to delete this appointment? This action cannot be undone."
+          confirmText="Delete"
+          cancelText="Cancel"
+          type="danger"
+          onConfirm={() => remove(deleteConfirm)}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
     </main>
   )
 }
 
 // Add Actual Services button + modal
-function AddActualServicesButton({ appointmentId, services, staff, onAdded }) {
+function AddActualServicesButton({ appointmentId, services, staff, currentStaffMember, onAdded }) {
   const [open, setOpen] = React.useState(false)
   return (
     <>
@@ -302,6 +282,7 @@ function AddActualServicesButton({ appointmentId, services, staff, onAdded }) {
           appointmentId={appointmentId}
           services={services}
           staff={staff}
+          currentStaffMember={currentStaffMember}
           onClose={() => setOpen(false)}
           onSaved={() => {
             setOpen(false)
@@ -331,31 +312,137 @@ const getNowIST = () => {
 };
 // CLEAN MODALS BELOW
 
-function FormModalContainer({ services, staff, onClose, onCreated, onError }) {
-  const [customer, setCustomer] = useState({ first_name: "", last_name: "", email: "", phone: "" })
+function FormModalContainer({ services, categories, staff, onClose, onCreated, onError }) {
+  // Step tracking: 1=phone lookup, 2=family member selection, 3=service selection
+  const [step, setStep] = useState(1)
+  const [mobileNumber, setMobileNumber] = useState("")
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [customer, setCustomer] = useState<any>(null)
+  const [selectedMember, setSelectedMember] = useState<any>(null) // null for self, object for family member
+  const [familyMembers, setFamilyMembers] = useState<any[]>([])
+  
   const [notes, setNotes] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
-
+  
   const { date: todayIST, time: nowIST } = getNowIST()
-
   const [date, setDate] = useState(todayIST)
   const [time, setTime] = useState(nowIST)
-
   const isToday = date === todayIST
-  const [selectedServices, setSelectedServices] = useState([])
-  const [selectedStaff, setSelectedStaff] = useState([])
+  
+  const [selectedServices, setSelectedServices] = useState<Array<{serviceId: number, serviceName: string, categoryName: string, staffId: number | null, staffName: string | null}>>([])
   const [loading, setLoading] = useState(false)
 
-  function toggle(arr, value) {
-    return arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value]
+  // Fetch customer details by mobile number
+  const handleFetchDetails = async () => {
+    if (!mobileNumber.trim()) {
+      onError?.("Please enter a mobile number")
+      return
+    }
+    
+    setLookupLoading(true)
+    try {
+      const res = await fetch(`/api/customers/lookup?phone=${encodeURIComponent(mobileNumber)}`)
+      const data = await res.json()
+      
+      if (data.found && data.customer) {
+        setCustomer(data.customer)
+        setFamilyMembers(data.customer.familyMembers || [])
+        setStep(2) // Move to family member selection
+      } else {
+        // New customer - create minimal customer object
+        setCustomer({
+          id: null,
+          first_name: "",
+          last_name: "",
+          email: "",
+          phone: mobileNumber,
+          familyMembers: []
+        })
+        setFamilyMembers([])
+        setStep(2)
+      }
+    } catch (err) {
+      onError?.("Failed to fetch customer details")
+    } finally {
+      setLookupLoading(false)
+    }
+  }
+
+  // Add family member - must create customer first if new
+  const handleAddFamilyMember = async (memberData: any) => {
+    let customerId = customer?.id
+    
+    // If customer doesn't exist yet, create them first
+    if (!customerId) {
+      if (!customer?.first_name?.trim()) {
+        onError?.("Please enter customer name first")
+        return
+      }
+      
+      try {
+        const customerRes = await fetch("/api/customers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            first_name: customer.first_name,
+            last_name: customer.last_name || "",
+            email: customer.email || "",
+            phone: mobileNumber,
+            gender: customer.gender || null
+          })
+        })
+        
+        if (customerRes.ok) {
+          const newCustomer = await customerRes.json()
+          customerId = newCustomer.id
+          setCustomer({ ...customer, id: customerId })
+        } else {
+          const error = await customerRes.json().catch(() => ({}))
+          onError?.(error.error || "Failed to create customer")
+          return
+        }
+      } catch (err) {
+        onError?.("Failed to create customer")
+        return
+      }
+    }
+    
+    // Now add the family member
+    try {
+      const res = await fetch(`/api/customers/${customerId}/family-members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(memberData)
+      })
+      
+      if (res.ok) {
+        const newMember = await res.json()
+        setFamilyMembers([...familyMembers, newMember])
+        return newMember
+      } else {
+        const error = await res.json().catch(() => ({}))
+        onError?.(error.error || "Failed to add family member")
+      }
+    } catch (err) {
+      onError?.("Failed to add family member")
+    }
+  }
+
+  // Validate and proceed to service selection
+  const handleProceedToServices = () => {
+    if (!customer?.id && !customer?.first_name) {
+      onError?.("Please enter customer details")
+      return
+    }
+    setStep(3)
   }
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-    if (!customer.first_name.trim()) newErrors.first_name = "First name is required"
-    if (!customer.phone.trim()) newErrors.phone = "Phone is required"
+    if (!customer?.first_name?.trim()) newErrors.first_name = "First name is required"
+    if (!mobileNumber.trim()) newErrors.phone = "Phone is required"
+    if (mobileNumber.trim().length !== 10) newErrors.phone = "Phone must be 10 digits"
     if (selectedServices.length === 0) newErrors.services = "Select at least one service"
-    if (selectedStaff.length === 0) newErrors.staff = "Select at least one staff member"
     return newErrors
   }
 
@@ -370,16 +457,43 @@ function FormModalContainer({ services, staff, onClose, onCreated, onError }) {
 
     setLoading(true)
     try {
+      // Ensure customer exists (should already be created by now)
+      let customerId = customer?.id
+      if (!customerId) {
+        // Last resort: create customer if somehow not created yet
+        const customerRes = await fetch("/api/customers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            first_name: customer.first_name,
+            last_name: customer.last_name || "",
+            email: customer.email || "",
+            phone: mobileNumber,
+            gender: customer.gender || null
+          })
+        })
+        if (customerRes.ok) {
+          const newCustomer = await customerRes.json()
+          customerId = newCustomer.id
+        } else {
+          const error = await customerRes.json().catch(() => ({}))
+          onError?.(error.error || "Failed to create customer")
+          setLoading(false)
+          return
+        }
+      }
+
       const res = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer,
+          customer_id: customerId,
+          family_member_id: selectedMember?.id || null,
+          is_for_self: !selectedMember,
           notes,
           date,
           time,
-          selected_servicesIds: selectedServices,
-          selected_staffIds: selectedStaff,
+          selected_services: selectedServices, // [{serviceId, staffId}]
         }),
       })
 
@@ -398,13 +512,13 @@ function FormModalContainer({ services, staff, onClose, onCreated, onError }) {
 
   return (
     <div
-      className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center"
+      className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
       <div
-        className="bg-white w-full max-w-2xl mx-auto overflow-hidden shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto rounded-4xl"
+        className="bg-white w-full max-w-2xl mx-auto overflow-hidden shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Professional Header */}
@@ -412,6 +526,7 @@ function FormModalContainer({ services, staff, onClose, onCreated, onError }) {
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <Plus size={20} />
             Create New Appointment
+            {step > 1 && <span className="text-sm font-normal opacity-90">- Step {step}/3</span>}
           </h2>
           <button
             onClick={onClose}
@@ -422,208 +537,265 @@ function FormModalContainer({ services, staff, onClose, onCreated, onError }) {
           </button>
         </div>
 
-        <form className="space-y-5 p-6" onSubmit={create}>
-          {/* Customer Info Section */}
-          <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl p-3 border border-emerald-200">
-            <h3 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2 uppercase tracking-wide">
-              <User size={14} />
-              Customer Information
-            </h3>
-            <div className="space-y-2">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">First Name *</label>
-                <input
-                  className={`w-full border-2 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition ${
-                    errors.first_name ? "border-red-400 bg-red-50" : "border-gray-300"
-                  }`}
-                  placeholder="First name"
-                  value={customer.first_name}
-                  onChange={(e) => {
-                    setCustomer((c) => ({ ...c, first_name: e.target.value }))
-                    if (errors.first_name) setErrors((e) => ({ ...e, first_name: "" }))
-                  }}
-                  required
-                  autoFocus
-                />
-                {errors.first_name && <p className="text-xs text-red-600 mt-1">{errors.first_name}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Last Name</label>
-                <input
-                  className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-                  placeholder="Last name"
-                  value={customer.last_name}
-                  onChange={(e) => setCustomer((c) => ({ ...c, last_name: e.target.value }))}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Phone *</label>
-                  <input
-                    className={`w-full border-2 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition ${
-                      errors.phone ? "border-red-400 bg-red-50" : "border-gray-300"
-                    }`}
-                    placeholder="Phone number"
-                    value={customer.phone}
-                    onChange={(e) => {
-                      setCustomer((c) => ({ ...c, phone: e.target.value }))
-                      if (errors.phone) setErrors((e) => ({ ...e, phone: "" }))
-                    }}
-                    required
-                  />
-                  {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
+        <form className="space-y-5 p-4 md:p-6" onSubmit={create}>
+          {/* STEP 1: Mobile Number Lookup */}
+          {step === 1 && (
+            <div className="space-y-4 md:space-y-6">
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                  <Search size={28} className="text-white md:w-8 md:h-8" />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Email</label>
-                  <input
-                    className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-                    placeholder="Email (optional)"
-                    type="email"
-                    value={customer.email}
-                    onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))}
-                  />
+                <h3 className="text-lg md:text-xl font-bold text-gray-800">Find Customer</h3>
+                <p className="text-xs md:text-sm text-gray-500">Enter mobile number to get started</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 md:p-6 border-2 border-indigo-100 shadow-sm">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Mobile Number *
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+                  <div className="flex-1 relative">
+                    <div className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm md:text-base">
+                      +91
+                    </div>
+                    <input
+                      type="tel"
+                      className="w-full border-2 border-indigo-200 rounded-xl pl-12 md:pl-14 pr-16 md:pr-20 py-3 md:py-4 text-base md:text-lg font-medium focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+                      placeholder="Enter 10-digit number"
+                      value={mobileNumber}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '')
+                        if (value.length <= 10) setMobileNumber(value)
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleFetchDetails())}
+                      maxLength={10}
+                      pattern="[0-9]{10}"
+                      autoFocus
+                    />
+                    {mobileNumber && (
+                      <div className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-xs font-medium">
+                        <span className={mobileNumber.length === 10 ? "text-green-600" : "text-gray-400"}>
+                          {mobileNumber.length}/10
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleFetchDetails}
+                    disabled={lookupLoading || mobileNumber.length !== 10}
+                    className="w-full sm:w-auto px-6 md:px-8 py-3 md:py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold shadow-lg hover:shadow-xl hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  >
+                    {lookupLoading ? (
+                      <>
+                        <Loader size={20} className="animate-spin" />
+                        <span className="text-sm md:text-base">Searching...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Search size={20} />
+                        <span className="text-sm md:text-base">Search</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Date & Time Section */}
-          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-3 border border-blue-200">
-            <h3 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2 uppercase tracking-wide">
-              <Clock size={14} />
-              Schedule
-            </h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Date *</label>
-                <input
-                  type="date"
-                  className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-                  value={date}
-                  min={todayIST}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Time *</label>
-                <input
-                  type="time"
-                  className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-                  value={time}
-                  min={isToday ? nowIST : undefined}
-                  onChange={(e) => setTime(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Services Selection */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2 uppercase tracking-wide">
-              <ClipboardList size={14} />
-              Services * {selectedServices.length > 0 && <span className="text-indigo-600 normal-case">({selectedServices.length})</span>}
-            </label>
-            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-3 border border-indigo-200 max-h-32 overflow-y-auto">
-              <div className="flex flex-wrap gap-2">
-                {(Array.isArray(services) ? services : []).length === 0 ? (
-                  <p className="text-gray-400 text-sm w-full text-center py-3">No services available</p>
+          {/* STEP 2: Family Member Selection */}
+          {step === 2 && (
+            <div className="space-y-4">
+              {/* Customer Info Display */}
+              <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl p-4 border border-emerald-200">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                  <User size={16} />
+                  Customer Information
+                </h3>
+                {customer?.id ? (
+                  <div className="space-y-2">
+                    <p className="text-sm"><span className="font-semibold">Name:</span> {customer.first_name} {customer.last_name}</p>
+                    <p className="text-sm"><span className="font-semibold">Email:</span> {customer.email || "N/A"}</p>
+                    <p className="text-sm"><span className="font-semibold">Phone:</span> {mobileNumber}</p>
+                  </div>
                 ) : (
-                  (Array.isArray(services) ? services : []).map((s) => (
-                    <button
-                      type="button"
-                      key={s.id}
-                      className={`px-3 py-1.5 rounded-lg border-2 text-xs font-medium transition-all transform hover:scale-105 shadow-sm ${
-                        selectedServices.includes(s.id)
-                          ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white border-indigo-800 shadow-md"
-                          : "bg-white text-indigo-700 border-indigo-300 hover:border-indigo-500 hover:shadow"
-                      }`}
-                      onClick={() => setSelectedServices((arr) => toggle(arr, s.id))}
-                    >
-                      {selectedServices.includes(s.id) ? "✓" : "+"} {s.name}
-                    </button>
-                  ))
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">First Name *</label>
+                      <input
+                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                        placeholder="First name"
+                        value={customer?.first_name || ""}
+                        onChange={(e) => setCustomer({...customer, first_name: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Last Name</label>
+                      <input
+                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                        placeholder="Last name"
+                        value={customer?.last_name || ""}
+                        onChange={(e) => setCustomer({...customer, last_name: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Gender</label>
+                      <select
+                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                        value={customer?.gender || ""}
+                        onChange={(e) => setCustomer({...customer, gender: e.target.value})}
+                      >
+                        <option value="">Select gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Email</label>
+                      <input
+                        type="email"
+                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                        placeholder="Email (optional)"
+                        value={customer?.email || ""}
+                        onChange={(e) => setCustomer({...customer, email: e.target.value})}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-            {errors.services && <p className="text-xs text-red-600 mt-1">{errors.services}</p>}
-          </div>
 
-          {/* Staff Selection */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2 uppercase tracking-wide">
-              <Users size={14} />
-              Staff * {selectedStaff.length > 0 && <span className="text-emerald-600 normal-case">({selectedStaff.length})</span>}
-            </label>
-            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg p-3 border border-emerald-200 max-h-32 overflow-y-auto">
-              <div className="flex flex-wrap gap-2">
-                {(Array.isArray(staff) ? staff : []).length === 0 ? (
-                  <p className="text-gray-400 text-sm w-full text-center py-3">No staff available</p>
-                ) : (
-                  (Array.isArray(staff) ? staff : []).map((st) => (
-                    <button
-                      type="button"
-                      key={st.id}
-                      className={`px-3 py-1.5 rounded-lg border-2 text-xs font-medium transition-all transform hover:scale-105 shadow-sm ${
-                        selectedStaff.includes(st.id)
-                          ? "bg-gradient-to-r from-emerald-600 to-green-600 text-white border-emerald-800 shadow-md"
-                          : "bg-white text-emerald-700 border-emerald-300 hover:border-emerald-500 hover:shadow"
-                      }`}
-                      onClick={() => setSelectedStaff((arr) => toggle(arr, st.id))}
-                    >
-                      {selectedStaff.includes(st.id) ? "✓" : "+"} {st.name || `${st.first_name || ""} ${st.last_name || ""}`.trim()}
-                    </button>
-                  ))
-                )}
+              {/* Family Member Selector */}
+              <FamilyMemberSelector
+                familyMembers={familyMembers}
+                selectedMember={selectedMember}
+                isForSelf={!selectedMember}
+                onSelectSelf={() => setSelectedMember(null)}
+                onSelectMember={setSelectedMember}
+                onAddMember={handleAddFamilyMember}
+                customerName={`${customer?.first_name || ""} ${customer?.last_name || ""}`.trim()}
+              />
+
+              {/* Date & Time */}
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-3 border border-blue-200">
+                <h3 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                  <Clock size={14} />
+                  Schedule
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Date *</label>
+                    <input
+                      type="date"
+                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                      value={date}
+                      min={todayIST}
+                      onChange={(e) => setDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Time *</label>
+                    <input
+                      type="time"
+                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                      value={time}
+                      min={isToday ? nowIST : undefined}
+                      onChange={(e) => setTime(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-3 border-t border-gray-200">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium text-sm hover:bg-gray-50 transition-all"
+                  onClick={() => setStep(1)}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleProceedToServices}
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-emerald-600 text-white font-medium text-sm shadow-lg hover:shadow-xl hover:brightness-110 transition-all"
+                >
+                  Next: Select Services
+                </button>
               </div>
             </div>
-            {errors.staff && <p className="text-xs text-red-600 mt-1">{errors.staff}</p>}
-          </div>
+          )}
 
-          {/* Notes */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2 uppercase tracking-wide">
-              <MessageSquare size={14} />
-              Notes (Optional)
-            </label>
-            <textarea
-              className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-              placeholder="Add any notes..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              spellCheck={false}
-            />
-          </div>
+          {/* STEP 3: Service Selection */}
+          {step === 3 && (
+            <div className="space-y-4">
+              {/* Booking For Display */}
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-3 border border-purple-200">
+                <p className="text-sm">
+                  <span className="font-semibold">Booking for:</span>{" "}
+                  {selectedMember ? `${selectedMember.name} (${selectedMember.age_group})` : `${customer?.first_name} ${customer?.last_name || ""}`.trim()}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  {date} at {time}
+                </p>
+              </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 justify-end pt-3 border-t border-gray-200">
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium text-sm hover:bg-gray-50 transition-all"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-emerald-600 text-white font-medium text-sm shadow-lg hover:shadow-xl hover:brightness-110 disabled:opacity-70 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader size={16} className="animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Plus size={16} />
-                  Create Appointment
-                </>
-              )}
-            </button>
-          </div>
+              {/* Category-Based Service Selector */}
+              <CategoryServiceSelector
+                categories={categories || []}
+                services={services || []}
+                staff={staff || []}
+                selectedServices={selectedServices}
+                onServicesChange={setSelectedServices}
+              />
+
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                  <MessageSquare size={14} />
+                  Notes (Optional)
+                </label>
+                <textarea
+                  className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+                  placeholder="Add any notes..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  spellCheck={false}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end pt-3 border-t border-gray-200">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium text-sm hover:bg-gray-50 transition-all"
+                  onClick={() => setStep(2)}
+                  disabled={loading}
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || selectedServices.length === 0}
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-emerald-600 text-white font-medium text-sm shadow-lg hover:shadow-xl hover:brightness-110 disabled:opacity-70 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader size={16} className="animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={16} />
+                      Create Appointment
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </form>
       </div>
     </div>
@@ -863,19 +1035,26 @@ function DetailsModal({ appt, onClose }) {
 }
 
 // Actual Services Modal and its sub-components (EditServiceModal, AddServiceModal) unchanged
-function ActualServicesModal({ appointmentId, services, staff, onClose, onSaved }) {
+function ActualServicesModal({ appointmentId, services, staff, currentStaffMember, onClose, onSaved }) {
   const { data: actuals, mutate } = useSWR(`/api/appointments/${appointmentId}/actual-services`, fetcher)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editRow, setEditRow] = useState(null)
+  const [deleteActualConfirm, setDeleteActualConfirm] = useState(null)
+
+  // Show all actuals to all users including staff
+  const filteredActuals = useMemo(() => {
+    if (!Array.isArray(actuals)) return []
+    return actuals
+  }, [actuals])
 
   async function deleteActual(id) {
-    if (!confirm("Delete this actual service?")) return
     await fetch(`/api/appointments/${appointmentId}/actual-services`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: [id] }),
     })
     await mutate()
+    setDeleteActualConfirm(null)
   }
 
   return (
@@ -910,7 +1089,7 @@ function ActualServicesModal({ appointmentId, services, staff, onClose, onSaved 
 
         {/* Service List */}
         <div className="overflow-y-auto flex-1 p-6">
-          {(Array.isArray(actuals) ? actuals : []).length === 0 ? (
+          {filteredActuals.length === 0 ? (
             <div className="text-center py-8">
               <CheckCircle size={40} className="mx-auto text-gray-300 mb-3" />
               <p className="text-gray-500 text-base font-medium">No services added yet</p>
@@ -918,7 +1097,7 @@ function ActualServicesModal({ appointmentId, services, staff, onClose, onSaved 
             </div>
           ) : (
             <div className="space-y-3">
-              {(Array.isArray(actuals) ? actuals : []).map((svc) => (
+              {filteredActuals.map((svc) => (
                 <div
                   key={svc.id}
                   className="bg-gradient-to-br from-emerald-50 to-blue-50 border-2 border-emerald-200 rounded-xl p-4 hover:shadow-md transition-all"
@@ -961,7 +1140,7 @@ function ActualServicesModal({ appointmentId, services, staff, onClose, onSaved 
                       </button>
                       <button
                         className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-all"
-                        onClick={() => deleteActual(svc.id)}
+                        onClick={() => setDeleteActualConfirm(svc.id)}
                         title="Delete"
                         type="button"
                       >
@@ -986,11 +1165,24 @@ function ActualServicesModal({ appointmentId, services, staff, onClose, onSaved 
           <Plus size={28} />
         </button>
 
+        {/* Delete Confirmation for Actual Service */}
+        {deleteActualConfirm && (
+          <ConfirmDialog
+            title="Delete Service"
+            message="Are you sure you want to delete this actual service?"
+            confirmText="Delete"
+            type="danger"
+            onConfirm={() => deleteActual(deleteActualConfirm)}
+            onCancel={() => setDeleteActualConfirm(null)}
+          />
+        )}
+
         {editRow && (
           <EditServiceModal
             row={editRow}
             services={services}
             staff={staff}
+            currentStaffMember={currentStaffMember}
             appointmentId={appointmentId}
             onClose={() => setEditRow(null)}
             onSaved={async () => {
@@ -1003,6 +1195,7 @@ function ActualServicesModal({ appointmentId, services, staff, onClose, onSaved 
           <AddServiceModal
             services={services}
             staff={staff}
+            currentStaffMember={currentStaffMember}
             appointmentId={appointmentId}
             onClose={() => setShowAddModal(false)}
             onSaved={async () => {
@@ -1017,7 +1210,7 @@ function ActualServicesModal({ appointmentId, services, staff, onClose, onSaved 
   )
 }
 
-function EditServiceModal({ row, services, staff, appointmentId, onClose, onSaved }) {
+function EditServiceModal({ row, services, staff, appointmentId, onClose, onSaved, currentStaffMember }) {
   const [form, setForm] = React.useState({
     ...row,
     price: row.price?.toString() || "",
@@ -1111,7 +1304,9 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
 
         {/* Staff Selection */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Staff (Optional)</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Staff (Optional)
+          </label>
           <select
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
             value={form.doneby_staff_id ?? ""}
@@ -1194,7 +1389,7 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
   )
 }
 
-function AddServiceModal({ services, staff, appointmentId, onClose, onSaved }) {
+function AddServiceModal({ services, staff, currentStaffMember, appointmentId, onClose, onSaved }) {
   const [form, setForm] = React.useState({
     service_id: "",
     doneby_staff_id: "",
@@ -1291,7 +1486,9 @@ function AddServiceModal({ services, staff, appointmentId, onClose, onSaved }) {
 
         {/* Staff Selection */}
         <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1">Staff (Optional)</label>
+          <label className="block text-xs font-semibold text-gray-700 mb-1">
+            Staff (Optional)
+          </label>
           <select
             className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
             value={form.doneby_staff_id ?? ""}

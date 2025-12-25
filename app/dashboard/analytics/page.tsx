@@ -4,6 +4,7 @@ import useSWR from "swr"
 import { useMemo, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, Users, DollarSign, Zap, Calendar, ArrowRight, Filter } from "lucide-react"
+import LoadingSpinner from "@/components/LoadingSpinner"
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
@@ -204,7 +205,19 @@ export default function AnalyticsPage() {
         )}
       </div>
 
+      {/* Loading State */}
+      {isLoading && <LoadingSpinner message="Loading analytics..." />}
+
+      {/* Error State */}
+      {error && (
+        <div className="text-center py-12">
+          <p className="text-red-600 font-medium">Failed to load analytics data</p>
+        </div>
+      )}
+
       {/* KPI Cards */}
+      {showContent && (
+      <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         {/* Appointments Card */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
@@ -392,6 +405,8 @@ export default function AnalyticsPage() {
             </table>
           </div>
         </div>
+      )}
+      </>
       )}
     </main>
   )

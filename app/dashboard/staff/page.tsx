@@ -4,11 +4,14 @@ import type React from "react"
 
 import useSWR from "swr"
 import { useState } from "react"
+import Toast from "@/components/Toast"
+import ConfirmDialog from "@/components/ConfirmDialog"
+import LoadingSpinner from "@/components/LoadingSpinner"
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
 export default function StaffPage() {
-  const { data, mutate } = useSWR("/api/staff", fetcher)
+  const { data, mutate, isLoading } = useSWR("/api/staff", fetcher)
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -20,6 +23,8 @@ export default function StaffPage() {
   })
   const [editId, setEditId] = useState<number | null>(null)
   const [edit, setEdit] = useState<any>({})
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+  const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
 
   async function create(e: React.FormEvent) {
     e.preventDefault()
@@ -53,14 +58,25 @@ export default function StaffPage() {
     mutate()
   }
   async function remove(id: number) {
-    if (!confirm("Delete this staff?")) return
-    await fetch(`/api/staff/${id}`, { method: "DELETE" })
-    mutate()
+    try {
+      await fetch(`/api/staff/${id}`, { method: "DELETE" })
+      setToast({ type: "success", message: "Staff deleted successfully!" })
+      mutate()
+    } catch (error) {
+      setToast({ type: "error", message: "Failed to delete staff" })
+    } finally {
+      setDeleteConfirm(null)
+    }
   }
 
   return (
     <main className="p-4 max-w-screen-sm mx-auto">
       <h1 className="text-xl font-semibold mb-3">Staff</h1>
+      
+      {isLoading && <LoadingSpinner message="Loading staff..." />}
+      
+      {!isLoading && (
+      <>
       <form onSubmit={create} className="flex flex-col gap-2 mb-6">
         <div className="grid grid-cols-2 gap-2">
           <input
@@ -183,7 +199,7 @@ export default function StaffPage() {
                   >
                     Edit
                   </button>
-                  <button className="text-red-600 text-sm" onClick={() => remove(s.id)}>
+                  <button className="text-red-600 text-sm" onClick={() => setDeleteConfirm(s.id)}>
                     Delete
                   </button>
                 </div>
@@ -192,6 +208,23 @@ export default function StaffPage() {
           </article>
         ))}
       </section>
+      </>
+      )}
+
+      {/* Toast */}
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+
+      {/* Delete Confirmation */}
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="Delete Staff"
+          message="Are you sure you want to delete this staff member? This action cannot be undone."
+          confirmText="Delete"
+          type="danger"
+          onConfirm={() => remove(deleteConfirm)}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
     </main>
   )
 }

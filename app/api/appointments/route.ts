@@ -10,6 +10,9 @@ export async function GET(req: Request) {
             CONCAT(c.first_name,' ',c.last_name) AS customer_name,
             c.phone,
             c.email,
+            fm.id as family_member_id,
+            fm.name as family_member_name,
+            fm.age_group as family_member_age_group,
             ab.id as billing_id,
             ab.total_amount,
             ab.paid_amount,
@@ -19,15 +22,21 @@ export async function GET(req: Request) {
             ab.updated_at as billing_date
      FROM appointments a
      JOIN customers c ON a.customer_id=c.id
+     LEFT JOIN family_members fm ON a.family_member_id=fm.id
      LEFT JOIN appointment_billing ab ON ab.appointment_id=a.id
      ${where}
      ORDER BY a.scheduled_start ASC`,
     date ? [date] : [],
   )
   
-  // Transform to include billing object
+  // Transform to include billing and family member objects
   const enrichedRows = (rows || []).map((row: any) => ({
     ...row,
+    family_member: row.family_member_id ? {
+      id: row.family_member_id,
+      name: row.family_member_name,
+      age_group: row.family_member_age_group
+    } : null,
     billing: row.billing_id ? {
       id: row.billing_id,
       total_amount: row.total_amount,
@@ -45,34 +54,35 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const {
-    customer, // {first_name,last_name,phone,email}
+    customer_id,
+    family_member_id = null,
+    is_for_self = true,
     notes = null,
     date, // YYYY-MM-DD
     time, // HH:mm
-    selected_servicesIds = [],
-    selected_staffIds = [],
+    selected_services = [], // [{serviceId, staffId}]
   } = body
 
-  if (!customer?.first_name || !date || !time) {
+  if (!customer_id || !date || !time) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
 
-  // Always create a new customer (no duplicate checking by email/phone)
-  let customerId: number | null = null;
-  
-  const customerRes: any = await execute("INSERT INTO customers (first_name,last_name,email,phone) VALUES (?,?,?,?)", [
-    customer.first_name.trim(),
-    customer?.last_name?.trim() ?? ""  ,
-    customer.email || null,
-    customer.phone || null,
-  ])
-  customerId = customerRes.insertId;
+  if (!Array.isArray(selected_services) || selected_services.length === 0) {
+    return NextResponse.json({ error: "At least one service is required" }, { status: 400 })
+  }
 
   const scheduled_start = new Date(`${date}T${time}:00`)
+  
+  // Extract service IDs and staff IDs for the appointment record
+  const selected_servicesIds = selected_services.map(s => s.serviceId)
+  const selected_staffIds = selected_services.map(s => s.staffId)
+
   const appointmentRes: any = await execute(
-    "INSERT INTO appointments (customer_id, scheduled_start, status, notes, selected_servicesIds, selected_staffIds) VALUES (?,?,?,?,CAST(? AS JSON),CAST(? AS JSON))",
+    "INSERT INTO appointments (customer_id, family_member_id, is_for_self, scheduled_start, status, notes, selected_servicesIds, selected_staffIds) VALUES (?,?,?,?,?,?,CAST(? AS JSON),CAST(? AS JSON))",
     [
-      customerId,
+      customer_id,
+      family_member_id,
+      is_for_self ? 1 : 0,
       scheduled_start,
       "scheduled",
       notes,
@@ -83,10 +93,9 @@ export async function POST(req: Request) {
 
   const appointmentId = appointmentRes.insertId;
 
-  // Automatically create actual services from selected services
-  if (selected_servicesIds && selected_servicesIds.length > 0) {
-    // Get service details (price) for each selected service
-    const serviceIds = selected_servicesIds.map((id: any) => Number(id)).filter((id: number) => id > 0);
+  // Create actual services with assigned staff for each selected service
+  if (selected_services.length > 0) {
+    const serviceIds = selected_services.map((s: any) => Number(s.serviceId)).filter((id: number) => id > 0);
     
     if (serviceIds.length > 0) {
       const placeholders = serviceIds.map(() => '?').join(',');
@@ -98,11 +107,11 @@ export async function POST(req: Request) {
       // Create a map of service prices
       const servicePriceMap = new Map(services.map((s: any) => [s.id, s.price]));
       
-      // Insert actual services for each selected service
-      for (let i = 0; i < serviceIds.length; i++) {
-        const serviceId = serviceIds[i];
+      // Insert actual services with their assigned staff
+      for (const selectedService of selected_services) {
+        const serviceId = Number(selectedService.serviceId);
+        const staffId = selectedService.staffId ? Number(selectedService.staffId) : null;
         const price = servicePriceMap.get(serviceId) || 0;
-        const staffId = selected_staffIds && selected_staffIds[i] ? Number(selected_staffIds[i]) : null;
         
         await execute(
           `INSERT INTO appointment_actualtaken_services 

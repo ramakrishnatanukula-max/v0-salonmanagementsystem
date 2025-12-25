@@ -3,10 +3,15 @@
 import { useState } from "react"
 import { Menu, X, ShoppingBag, Layers, UserPlus, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
+import useSWR from "swr"
+
+const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
 export default function MobileMenu() {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
+  const { data } = useSWR("/api/auth/me", fetcher, { revalidateOnFocus: false })
+  const role = data?.role as "admin" | "receptionist" | "staff" | undefined
 
   const handleLogout = async () => {
     try {
@@ -17,11 +22,19 @@ export default function MobileMenu() {
     }
   }
 
-  const menuItems = [
-    { icon: ShoppingBag, label: "Services", href: "/dashboard/services" },
-    { icon: Layers, label: "Categories", href: "/dashboard/services/categories" },
-    { icon: UserPlus, label: "Create Staff", href: "/dashboard/signup" },
+  const allMenuItems = [
+    { icon: ShoppingBag, label: "Services", href: "/dashboard/services", roles: ["admin"] },
+    { icon: Layers, label: "Categories", href: "/dashboard/services/categories", roles: ["admin"] },
+    { icon: UserPlus, label: "Create Staff", href: "/dashboard/signup", roles: ["admin"] },
   ]
+
+  // Filter menu items based on role
+  const menuItems = role ? allMenuItems.filter((item) => item.roles.includes(role)) : []
+
+  // Always show menu for logout, even if no other items
+  if (!role) {
+    return null
+  }
 
   return (
     <>
@@ -52,24 +65,36 @@ export default function MobileMenu() {
           isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
         }`}
       >
+        {/* User Info Header */}
+        {data?.name && (
+          <div className="px-5 py-3 bg-gradient-to-r from-indigo-50 to-emerald-50 border-b border-gray-200">
+            <p className="font-semibold text-gray-900 text-sm">{data.name}</p>
+            <p className="text-xs text-gray-600 capitalize">{data.role}</p>
+          </div>
+        )}
+        
         <nav className="py-1">
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <button
-                key={item.href}
-                onClick={() => {
-                  router.push(item.href)
-                  setIsOpen(false)
-                }}
-                className="w-full flex items-center gap-3 px-5 py-3.5 text-gray-700 hover:bg-gray-50 transition-colors text-left"
-              >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                <span className="font-medium text-sm">{item.label}</span>
-              </button>
-            )
-          })}
-          <div className="border-t border-gray-200 my-1"></div>
+          {menuItems.length > 0 && (
+            <>
+              {menuItems.map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => {
+                      router.push(item.href)
+                      setIsOpen(false)
+                    }}
+                    className="w-full flex items-center gap-3 px-5 py-3.5 text-gray-700 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                )
+              })}
+              <div className="border-t border-gray-200 my-1"></div>
+            </>
+          )}
           <button
             onClick={() => {
               handleLogout()

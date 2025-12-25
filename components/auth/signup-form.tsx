@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Toast from "@/components/Toast"
 
 type Service = { id: number; name: string; category_id: number }
 type Category = { id: number; name: string; services: Service[] }
@@ -18,6 +19,7 @@ export default function SignupForm({ categories }: { categories: Category[] }) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [password, setPassword] = useState("")
+  const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
 
   const toggleService = (id: number) => {
     setSelectedServices((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
@@ -43,10 +45,22 @@ export default function SignupForm({ categories }: { categories: Category[] }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Signup failed")
-      setSuccess("Account created. Redirecting to login...")
-      setTimeout(() => router.push("/login"), 800)
+      
+      // Show success toast
+      setToast({ type: "success", message: "Account created successfully!" })
+      setSuccess("Account created successfully!")
+      
+      // Reset form
+      setName("")
+      setEmail("")
+      setMobile("")
+      setPassword("")
+      setRole("receptionist")
+      setSelectedServices([])
+      
     } catch (err: any) {
       setError(err.message)
+      setToast({ type: "error", message: err.message || "Failed to create account" })
     } finally {
       setLoading(false)
     }
@@ -203,6 +217,9 @@ export default function SignupForm({ categories }: { categories: Category[] }) {
           Log in
         </a>
       </p>
+
+      {/* Toast Notification */}
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
     </form>
   )
 }
