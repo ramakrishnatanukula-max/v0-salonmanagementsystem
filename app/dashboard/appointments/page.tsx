@@ -65,14 +65,16 @@ function Toast({
 
 export default function AppointmentsPage() {
   const [date, setDate] = useState(fmt(new Date()))
-  const { data: appts, mutate } = useSWR(`/api/appointments?date=${date}`, fetcher)
-  const { data: services } = useSWR("/api/services", fetcher)
-  const { data: staff } = useSWR("/api/staff", fetcher)
+  const { data: appts, mutate, isLoading: apptsLoading } = useSWR(`/api/appointments?date=${date}`, fetcher)
+  const { data: services, isLoading: servicesLoading } = useSWR("/api/services", fetcher)
+  const { data: staff, isLoading: staffLoading } = useSWR("/api/staff", fetcher)
   const [showForm, setShowForm] = useState(false)
   const [detailsId, setDetailsId] = useState(null)
   const [toastConfig, setToastConfig] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+
+  const isLoading = apptsLoading || servicesLoading || staffLoading
 
   const serviceMap = useMemo(() => {
     const map = {}
@@ -126,25 +128,25 @@ export default function AppointmentsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-0 relative flex flex-col">
+    <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 relative flex flex-col">
       {/* Sticky calendar header */}
-      <section className="sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-md rounded-b-2xl">
-        <div className="px-4 py-4 flex items-center justify-between mb-3">
+      <section className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
+        <div className="px-3 pt-3 pb-2">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent">
               Appointments
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">Schedule and manage appointments</p>
           </div>
         </div>
-        <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-hide" ref={scrollContainerRef}>
+        <div className="flex gap-2 px-3 pb-3 overflow-x-auto scrollbar-hide" ref={scrollContainerRef}>
           {days.map((d) => (
             <button
               key={d}
-              className={`flex flex-col items-center justify-center px-3 py-2 rounded-lg shadow-sm transition flex-shrink-0 ${
+              className={`flex flex-col items-center justify-center px-4 py-2 rounded-lg transition flex-shrink-0 min-w-[70px] ${
                 d === date
-                  ? "bg-gradient-to-r from-indigo-600 to-emerald-500 text-white font-bold scale-105 shadow-md"
-                  : "bg-white text-gray-700 border border-gray-200 hover:border-indigo-300 hover:shadow"
+                  ? "bg-gradient-to-r from-indigo-600 to-emerald-500 text-white font-semibold shadow-md"
+                  : "bg-white text-gray-700 border border-gray-200"
               }`}
               onClick={() => setDate(d)}
               style={{ fontSize: 13, minWidth: "70px" }}
@@ -157,53 +159,63 @@ export default function AppointmentsPage() {
       </section>
 
       {/* Appointments list */}
-      <section className="mt-4 px-3 pb-28">
-        {(Array.isArray(appts) ? appts : []).length === 0 && (
-          <div className="text-center mt-12">
+      <section className="flex-1 px-3 py-3 pb-24 overflow-auto">
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center mt-12">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+              <Loader className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-indigo-600" size={24} />
+            </div>
+            <p className="text-gray-500 font-medium mt-4">Loading appointments...</p>
+            <p className="text-gray-400 text-sm mt-1">Please wait</p>
+          </div>
+        )}
+        {!isLoading && (Array.isArray(appts) ? appts : []).length === 0 && (
+          <div className="text-center mt-12 px-4">
             <AlertCircle className="mx-auto text-gray-300 mb-3" size={48} />
             <p className="text-gray-500 font-medium">No appointments on this date</p>
             <p className="text-gray-400 text-sm mt-1">Tap the + button to create one</p>
           </div>
         )}
-        {(Array.isArray(appts) ? appts : []).map((a) => {
+        {!isLoading && (Array.isArray(appts) ? appts : []).map((a) => {
           const isBilled = a.billing?.id
           return (
           <article
             key={a.id}
-            className={`rounded-xl p-4 shadow-md transition-all duration-200 mb-3 ${
+            className={`rounded-xl p-3.5 shadow-sm transition-all duration-200 mb-3 border ${
               isBilled
-                ? "bg-gray-300 text-gray-300 border border-gray-700 opacity-60"
-                : "bg-white hover:shadow-xl border border-gray-100 hover:border-indigo-200 hover:-translate-y-0.5"
+                ? "bg-gray-50 text-gray-400 border-gray-200 opacity-70"
+                : "bg-white hover:shadow-md border-gray-100"
             }`}
           >
             <div className="flex justify-between items-start gap-3">
-              <div className="flex-grow">
-                <p className={`font-semibold text-lg ${isBilled ? "text-gray-400" : "text-gray-900"}`}>{a.customer_name}</p>
-                <div className="flex flex-wrap gap-2 mt-1.5">
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+              <div className="flex-grow min-w-0">
+                <p className={`font-semibold text-base truncate ${isBilled ? "text-gray-400" : "text-gray-900"}`}>{a.customer_name}</p>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">
                     {new Date(a.scheduled_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  <span className={`text-xs px-2 py-0.5 rounded font-medium uppercase ${
                     a.status === "completed"
-                      ? "bg-emerald-100 text-emerald-700"
+                      ? "bg-emerald-50 text-emerald-700"
                       : a.status === "confirmed"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-amber-100 text-amber-700"
+                      ? "bg-blue-50 text-blue-700"
+                      : "bg-amber-50 text-amber-700"
                   }`}>
-                    {a.status?.toUpperCase()}
+                    {a.status}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mt-2">
-                  <span className="font-semibold">Services:</span> {(a.selected_servicesIds || []).map((sid) => serviceMap[sid] || sid).join(", ") || "-"}
+                <p className="text-xs text-gray-600 mt-2 line-clamp-1">
+                  <span className="font-medium">Services:</span> {(a.selected_servicesIds || []).map((sid) => serviceMap[sid] || sid).join(", ") || "-"}
                 </p>
-                <p className="text-sm text-gray-600">
-                  <span className="font-semibold">Staff:</span> {(a.selected_staffIds || []).map((sid) => staffMap[sid] || sid).join(", ") || "-"}
+                <p className="text-xs text-gray-600 line-clamp-1">
+                  <span className="font-medium">Staff:</span> {(a.selected_staffIds || []).map((sid) => staffMap[sid] || sid).join(", ") || "-"}
                 </p>
               </div>
               {!isBilled && (
-              <div className="flex flex-col items-end gap-2">
+              <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                 <button
-                  className="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-sm transition-all active:scale-95"
+                  className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium shadow-sm transition-colors active:scale-95"
                   title="View Details"
                   onClick={() => setDetailsId(a.id)}
                 >
@@ -218,7 +230,7 @@ export default function AppointmentsPage() {
                   />
                 </div>
                 <button
-                  className="text-red-600 hover:text-red-700 font-semibold text-sm hover:bg-red-50 px-2 py-1 rounded-lg transition"
+                  className="text-red-600 hover:text-red-700 font-medium text-xs hover:bg-red-50 px-2 py-1 rounded-lg transition"
                   onClick={() => remove(a.id)}
                 >
                   Delete
@@ -235,7 +247,7 @@ export default function AppointmentsPage() {
       <button
         onClick={() => setShowForm(true)}
         aria-label="Add new appointment"
-        className="fixed bottom-20 sm:bottom-8 right-6 z-50 bg-gradient-to-tr from-indigo-600 to-emerald-500 p-4 rounded-full shadow-2xl text-white hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-300 flex items-center justify-center group"
+        className="fixed bottom-20 md:bottom-6 right-4 z-50 bg-gradient-to-tr from-indigo-600 to-emerald-500 p-3.5 rounded-full shadow-lg text-white hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-300 flex items-center justify-center group"
       >
         <Plus size={28} className="group-hover:rotate-90 transition-transform duration-300" />
       </button>

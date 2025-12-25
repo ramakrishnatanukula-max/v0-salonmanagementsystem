@@ -155,33 +155,6 @@ export default function AnalyticsPage() {
               </button>
             </div>
 
-            {/* Custom Date Inputs */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium text-gray-700">Specific Day:</span>
-                <input
-                  type="date"
-                  value={day}
-                  onChange={(e) => {
-                    setDay(e.target.value)
-                  }}
-                  className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs outline-none focus:border-indigo-300 bg-white"
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium text-gray-700">Specific Month:</span>
-                <input
-                  type="month"
-                  value={month}
-                  onChange={(e) => {
-                    setMonth(e.target.value)
-                  }}
-                  className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs outline-none focus:border-indigo-300 bg-white"
-                />
-              </label>
-            </div>
-
             {/* Date Range */}
             <div className="flex flex-wrap gap-3 items-end mb-4">
               <label className="flex flex-col gap-1.5">
@@ -213,9 +186,7 @@ export default function AnalyticsPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  if (mode === "day") setMode("day")
-                  else if (mode === "month") setMode("month")
-                  else if (mode === "range") setMode("range")
+                  setMode("range")
                   setShowAdvancedFilter(false)
                 }}
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-all shadow-md"

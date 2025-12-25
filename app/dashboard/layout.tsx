@@ -4,6 +4,8 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import "../globals.css"
 import BottomNav from "@/components/BottomNav"
+import Sidebar from "@/components/Sidebar"
+import MobileMenu from "@/components/MobileMenu"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { verifyJWT } from "@/lib/auth"
@@ -35,8 +37,12 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <div className="min-h-dvh" style={{ paddingBottom: "calc(72px + env(safe-area-inset-bottom, 0px))" }}>
-          {children}
+        <MobileMenu />
+        <div className="flex min-h-screen bg-white md:bg-gray-50">
+          <Sidebar />
+          <main className="flex-1 w-full pb-20 md:pb-0 md:overflow-auto">
+            {children}
+          </main>
         </div>
         <BottomNav />
       </body>

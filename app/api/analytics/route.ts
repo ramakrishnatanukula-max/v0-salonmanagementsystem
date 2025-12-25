@@ -60,9 +60,9 @@ export async function GET(req: Request) {
       [from, to],
     )
 
-    // Revenue KPI - from appointment_billing table (final_amount) for completed appointments
+    // Revenue KPI - from appointment_billing table (paid_amount) for completed appointments
     const billingRevenueRow = await query<any>(
-      `SELECT COALESCE(SUM(ab.final_amount), 0) AS billing_revenue,
+      `SELECT COALESCE(SUM(ab.paid_amount), 0) AS billing_revenue,
               COALESCE(SUM(ab.total_amount), 0) AS total_billed
        FROM appointment_billing ab
        JOIN appointments a ON a.id = ab.appointment_id
@@ -113,7 +113,7 @@ export async function GET(req: Request) {
     const staffBilledRevenueRows = await query<any>(
       `SELECT 
          aas.doneby_staff_id,
-         COALESCE(SUM(ab.final_amount), 0) AS billed_revenue
+         COALESCE(SUM(ab.paid_amount), 0) AS billed_revenue
        FROM appointment_billing ab
        JOIN appointments a ON a.id = ab.appointment_id
        LEFT JOIN appointment_actualtaken_services aas ON aas.appointment_id = a.id

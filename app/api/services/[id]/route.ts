@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import { query } from "@/lib/db"
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const id = Number(params.id)
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: idStr } = await params;
+  const id = Number(idStr);
   const [rows] = await query<any[]>(
     "SELECT s.*, c.name AS category_name FROM services s LEFT JOIN service_categories c ON s.category_id = c.id WHERE s.id = ?",
     [id],
@@ -13,8 +14,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   return NextResponse.json(rows[0])
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const id = Number(params.id)
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: idStr } = await params;
+  const id = Number(idStr);
   const body = await req.json()
   const {
     name,
@@ -44,8 +46,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   return NextResponse.json({ id })
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
-  const id = Number(params.id)
+export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: idStr } = await params;
+  const id = Number(idStr);
   await query("DELETE FROM services WHERE id = ?", [id])
   return NextResponse.json({ ok: true })
 }

@@ -57,36 +57,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
 
-  // upsert customer by phone or email (if provided)
-  let customerId: number | null = null
+  // Always create a new customer (no duplicate checking by email/phone)
+  let customerId: number | null = null;
   
-  // Check for existing customer by phone or email
-  if (customer.phone) {
-    const existing = await query<any>("SELECT id FROM customers WHERE phone = ? ORDER BY id DESC LIMIT 1", [
-      customer.phone,
-    ])
-    if (existing.length) customerId = existing[0].id
-  }
-  
-  if (!customerId && customer.email) {
-    const existing = await query<any>("SELECT id FROM customers WHERE email = ? ORDER BY id DESC LIMIT 1", [
-      customer.email,
-    ])
-    if (existing.length) customerId = existing[0].id
-  }
-  
-  if (!customerId) {
-    const res: any = await execute("INSERT INTO customers (first_name,last_name,email,phone) VALUES (?,?,?,?)", [
-      customer.first_name.trim(),
-      customer?.last_name?.trim() ?? ""  ,
-      customer.email || null,
-      customer.phone || null,
-    ])
-    customerId = res.insertId
-  }
+  const customerRes: any = await execute("INSERT INTO customers (first_name,last_name,email,phone) VALUES (?,?,?,?)", [
+    customer.first_name.trim(),
+    customer?.last_name?.trim() ?? ""  ,
+    customer.email || null,
+    customer.phone || null,
+  ])
+  customerId = customerRes.insertId;
 
   const scheduled_start = new Date(`${date}T${time}:00`)
-  const res: any = await execute(
+  const appointmentRes: any = await execute(
     "INSERT INTO appointments (customer_id, scheduled_start, status, notes, selected_servicesIds, selected_staffIds) VALUES (?,?,?,?,CAST(? AS JSON),CAST(? AS JSON))",
     [
       customerId,
@@ -98,5 +81,38 @@ export async function POST(req: Request) {
     ],
   )
 
-  return NextResponse.json({ id: res.insertId })
+  const appointmentId = appointmentRes.insertId;
+
+  // Automatically create actual services from selected services
+  if (selected_servicesIds && selected_servicesIds.length > 0) {
+    // Get service details (price) for each selected service
+    const serviceIds = selected_servicesIds.map((id: any) => Number(id)).filter((id: number) => id > 0);
+    
+    if (serviceIds.length > 0) {
+      const placeholders = serviceIds.map(() => '?').join(',');
+      const services = await query<any>(
+        `SELECT id, price FROM services WHERE id IN (${placeholders})`,
+        serviceIds
+      );
+      
+      // Create a map of service prices
+      const servicePriceMap = new Map(services.map((s: any) => [s.id, s.price]));
+      
+      // Insert actual services for each selected service
+      for (let i = 0; i < serviceIds.length; i++) {
+        const serviceId = serviceIds[i];
+        const price = servicePriceMap.get(serviceId) || 0;
+        const staffId = selected_staffIds && selected_staffIds[i] ? Number(selected_staffIds[i]) : null;
+        
+        await execute(
+          `INSERT INTO appointment_actualtaken_services 
+           (appointment_id, service_id, doneby_staff_id, status, price) 
+           VALUES (?, ?, ?, 'scheduled', ?)`,
+          [appointmentId, serviceId, staffId, price]
+        );
+      }
+    }
+  }
+
+  return NextResponse.json({ id: appointmentId })
 }

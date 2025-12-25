@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { query, execute } from "@/lib/db";
 
 // GET /api/appointments/[id]/billing
-export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const appointmentId = Number(params.id);
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const appointmentId = Number(id);
   if (!Number.isFinite(appointmentId)) {
     return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 });
   }
@@ -21,11 +22,13 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 }
 
 // POST /api/appointments/[id]/billing
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const appointmentId = Number(params.id);
-  if (!Number.isFinite(appointmentId)) {
-    return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 });
-  }
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const appointmentId = Number(id);
+  console.log("Creating billing for appointment id:", appointmentId);
+  // if (!Number.isFinite(appointmentId)) {
+  //   return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 });
+  // }
   
   try {
     // Check if billing already exists for this appointment
@@ -33,6 +36,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       "SELECT id FROM appointment_billing WHERE appointment_id = ?",
       [appointmentId]
     );
+    console.log("Existing billing records:", existingBilling);
 
     if (existingBilling && existingBilling.length > 0) {
       return NextResponse.json(
@@ -45,22 +49,33 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const { 
       total_amount,
       paid_amount,
-      appointment_actualtaken_services_id,
+      final_amount,
       payment_method, 
       payment_status = "pending", 
       notes 
     } = body;
+    console.log("Billing POST body:", body);
 
     if (!total_amount) {
       return NextResponse.json({ error: "total_amount is required" }, { status: 400 });
     }
 
-    if (!appointment_actualtaken_services_id) {
-      return NextResponse.json({ error: "appointment_actualtaken_services_id is required" }, { status: 400 });
+    // Get the first actual service for this appointment (required by DB schema)
+    const actualServices = await query<any>(
+      "SELECT id FROM appointment_actualtaken_services WHERE appointment_id = ? LIMIT 1",
+      [appointmentId]
+    );
+    
+    if (!actualServices || actualServices.length === 0) {
+      return NextResponse.json({ 
+        error: "No actual services found for this appointment. Please add services before creating billing." 
+      }, { status: 400 });
     }
+    
+    const appointment_actualtaken_services_id = actualServices[0].id;
 
-    // Use paid_amount if provided, otherwise default to 0
-    const actualPaidAmount = paid_amount !== undefined ? paid_amount : 0;
+    // Use final_amount, paid_amount, or total_amount (in that order of preference)
+    const actualPaidAmount = final_amount !== undefined ? final_amount : (paid_amount !== undefined ? paid_amount : total_amount);
 
     const res: any = await execute(
       `INSERT INTO appointment_billing 
@@ -68,6 +83,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [appointmentId, appointment_actualtaken_services_id, total_amount, actualPaidAmount, payment_method, payment_status, notes]
     );
+    console.log("Billing POST insert result:", res);
 
     return NextResponse.json({ 
       id: res.insertId,
@@ -86,8 +102,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 }
 
 // PATCH /api/appointments/[id]/billing
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const appointmentId = Number(params.id);
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const appointmentId = Number(id);
   if (!Number.isFinite(appointmentId)) {
     return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 });
   }

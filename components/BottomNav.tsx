@@ -12,14 +12,11 @@ export default function BottomNav() {
   const { data } = useSWR("/api/auth/me", fetcher, { revalidateOnFocus: false })
   const role = data?.role as "admin" | "receptionist" | "staff" | undefined
 
-  // Base items
+  // Base items - only core navigation items
   const allItems = [
     { label: "Appointments", href: "/dashboard/appointments", icon: Home, roles: ["admin", "receptionist", "staff"] },
-    { label: "Services", href: "/dashboard/services", icon: ClipboardList, roles: ["admin"] },
-    { label: "Categories", href: "/dashboard/services/categories", icon: Layers, roles: ["admin"] },
     { label: "Billing", href: "/dashboard/billing", icon: CreditCard, roles: ["admin", "receptionist"] },
     { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3, roles: ["admin"] },
-    { label: "Create", href: "/dashboard/signup", icon: Users, roles: ["admin"] },
   ]
 
   // Filter items based on role
@@ -29,7 +26,7 @@ export default function BottomNav() {
     <nav
       role="navigation"
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-50 w-full bg-white/90 border-t border-indigo-200 backdrop-blur supports-[backdrop-filter]:bg-white/80"
+      className="fixed inset-x-0 bottom-0 z-50 w-full bg-white/90 border-t border-indigo-200 backdrop-blur supports-[backdrop-filter]:bg-white/80 md:hidden"
       style={{
         WebkitBackdropFilter: "blur(10px)",
       }}
