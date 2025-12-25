@@ -43,10 +43,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     const body = await req.json();
     const { 
-      total_amount, 
-      discount = 0, 
-      final_amount, 
-      tax_amount = 0,
+      total_amount,
+      paid_amount,
+      appointment_actualtaken_services_id,
       payment_method, 
       payment_status = "pending", 
       notes 
@@ -56,23 +55,25 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: "total_amount is required" }, { status: 400 });
     }
 
-    // Calculate final_amount if not provided
-    const calculatedFinalAmount = final_amount || (Number(total_amount) - Number(discount));
+    if (!appointment_actualtaken_services_id) {
+      return NextResponse.json({ error: "appointment_actualtaken_services_id is required" }, { status: 400 });
+    }
+
+    // Use paid_amount if provided, otherwise default to 0
+    const actualPaidAmount = paid_amount !== undefined ? paid_amount : 0;
 
     const res: any = await execute(
       `INSERT INTO appointment_billing 
-       (appointment_id, total_amount, discount, final_amount, tax_amount, payment_method, payment_status, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [appointmentId, total_amount, discount, calculatedFinalAmount, tax_amount, payment_method, payment_status, notes]
+       (appointment_id, appointment_actualtaken_services_id, total_amount, paid_amount, payment_method, payment_status, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [appointmentId, appointment_actualtaken_services_id, total_amount, actualPaidAmount, payment_method, payment_status, notes]
     );
 
     return NextResponse.json({ 
       id: res.insertId,
       appointment_id: appointmentId,
       total_amount,
-      discount,
-      final_amount: calculatedFinalAmount,
-      tax_amount,
+      paid_amount: actualPaidAmount,
       payment_method,
       payment_status,
       notes,
@@ -96,7 +97,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const fields = [];
     const values = [];
 
-    const allowedFields = ["total_amount", "discount", "final_amount", "tax_amount", "payment_method", "payment_status", "notes"];
+    const allowedFields = ["total_amount", "paid_amount", "payment_method", "payment_status", "notes"];
     
     for (const key of allowedFields) {
       if (key in body) {

@@ -12,9 +12,7 @@ export async function GET(req: Request) {
             c.email,
             ab.id as billing_id,
             ab.total_amount,
-            ab.discount,
-            ab.final_amount,
-            ab.tax_amount,
+            ab.paid_amount,
             ab.payment_method,
             ab.payment_status,
             ab.notes as billing_notes,
@@ -33,9 +31,7 @@ export async function GET(req: Request) {
     billing: row.billing_id ? {
       id: row.billing_id,
       total_amount: row.total_amount,
-      discount: row.discount,
-      final_amount: row.final_amount,
-      tax_amount: row.tax_amount,
+      paid_amount: row.paid_amount,
       payment_method: row.payment_method,
       payment_status: row.payment_status,
       notes: row.billing_notes,
@@ -61,14 +57,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
 
-  // upsert customer by phone (if provided)
+  // upsert customer by phone or email (if provided)
   let customerId: number | null = null
-  // if (customer.phone) {
-  //   const existing = await query<any>("SELECT id FROM customers WHERE phone = ? ORDER BY id DESC LIMIT 1", [
-  //     customer.phone,
-  //   ])
-  //   if (existing.length) customerId = existing[0].id
-  // }
+  
+  // Check for existing customer by phone or email
+  if (customer.phone) {
+    const existing = await query<any>("SELECT id FROM customers WHERE phone = ? ORDER BY id DESC LIMIT 1", [
+      customer.phone,
+    ])
+    if (existing.length) customerId = existing[0].id
+  }
+  
+  if (!customerId && customer.email) {
+    const existing = await query<any>("SELECT id FROM customers WHERE email = ? ORDER BY id DESC LIMIT 1", [
+      customer.email,
+    ])
+    if (existing.length) customerId = existing[0].id
+  }
+  
   if (!customerId) {
     const res: any = await execute("INSERT INTO customers (first_name,last_name,email,phone) VALUES (?,?,?,?)", [
       customer.first_name.trim(),
