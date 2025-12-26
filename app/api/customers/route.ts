@@ -10,9 +10,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
-  const { first_name, last_name, email = null, phone = null, gender = null, marketing_opt_in = 0 } = body
-  if (!first_name || !last_name)
-    return NextResponse.json({ error: "first_name and last_name required" }, { status: 400 })
+  const { first_name, last_name = "", email = null, phone = null, gender = null, marketing_opt_in = 0 } = body
+  if (!first_name)
+    return NextResponse.json({ error: "first_name is required" }, { status: 400 })
   
   try {
     // If phone is provided, check if customer already exists
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     // Create new customer
     const result: any = await execute(
       "INSERT INTO customers (first_name, last_name, email, phone, gender, marketing_opt_in) VALUES (?, ?, ?, ?, ?, ?)",
-      [first_name.trim(), last_name.trim(), email, phone, gender, Number(!!marketing_opt_in)],
+      [first_name.trim(), last_name ? last_name.trim() : "", email, phone, gender, Number(!!marketing_opt_in)],
     )
     return NextResponse.json({ id: result.insertId, exists: false })
   } catch (e: any) {

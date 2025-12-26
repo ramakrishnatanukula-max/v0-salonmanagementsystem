@@ -23,23 +23,28 @@ export default function AppointmentsPage() {
   const [detailsId, setDetailsId] = useState(null)
   const [toastConfig, setToastConfig] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+  const [updatingPayment, setUpdatingPayment] = useState<number | null>(null)
   const scrollContainerRef = React.useRef<HTMLDivElement>(null)
 
   const isLoading = apptsLoading || servicesLoading || categoriesLoading || staffLoading
 
   // Find current staff member if user is staff role
   const currentStaffMember = useMemo(() => {
-    if (currentUser?.role === 'staff' && Array.isArray(staff)) {
-      return staff.find(s => s.email === currentUser.email || 
-        (s.first_name === currentUser.first_name && s.last_name === currentUser.last_name))
+    if (currentUser?.role === 'staff' && currentUser?.user_id && Array.isArray(staff)) {
+      return staff.find(s => s.id === currentUser.user_id)
     }
     return null
   }, [currentUser, staff])
 
-  // Show all appointments to all users including staff
+  // Filter out completed appointments with paid status
   const filteredAppts = useMemo(() => {
     if (!Array.isArray(appts)) return []
-    return appts
+    return appts.filter(a => {
+      const isPaid = a.billing?.payment_status === "paid"
+      const isCompleted = a.status === "completed"
+      // Hide appointments that are both completed and paid
+      return !(isCompleted && isPaid)
+    })
   }, [appts])
 
   const serviceMap = useMemo(() => {
@@ -91,16 +96,47 @@ export default function AppointmentsPage() {
     }
   }
 
+  async function markAsPaid(appointmentId: number) {
+    setUpdatingPayment(appointmentId)
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}/billing`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payment_status: "paid" })
+      })
+      if (res.ok) {
+        setToastConfig({ type: "success", message: "Payment marked as paid!" })
+        mutate()
+      } else {
+        setToastConfig({ type: "error", message: "Failed to update payment status." })
+      }
+    } catch (err) {
+      setToastConfig({ type: "error", message: "Error updating payment status." })
+    } finally {
+      setUpdatingPayment(null)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 relative flex flex-col">
       {/* Sticky calendar header */}
       <section className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
         <div className="px-3 pt-3 pb-2">
-          <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent">
-              Appointments
-            </h1>
-            <p className="text-xs text-gray-500 mt-0.5">Schedule and manage appointments</p>
+          <div className="flex items-center gap-3">
+            {/* Logo */}
+            <div className="bg-black rounded-xl p-2 shadow-md flex-shrink-0">
+              <img
+                src="/siteicon.png"
+                alt="UniSalon Logo"
+                className="w-8 h-8 object-contain"
+              />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent">
+                Appointments
+              </h1>
+              <p className="text-xs text-gray-500 mt-0.5">Schedule and manage appointments</p>
+            </div>
           </div>
         </div>
         <div className="flex gap-2 px-3 pb-3 overflow-x-auto scrollbar-hide" ref={scrollContainerRef}>
@@ -134,18 +170,20 @@ export default function AppointmentsPage() {
         )}
         {!isLoading && filteredAppts.map((a) => {
           const isBilled = a.billing?.id
+          const isPending = isBilled && a.billing?.payment_status === "pending"
+          const isPaid = isBilled && a.billing?.payment_status === "paid"
           return (
           <article
             key={a.id}
             className={`rounded-xl p-3.5 shadow-sm transition-all duration-200 mb-3 border ${
-              isBilled
+              isPaid
                 ? "bg-gray-50 text-gray-400 border-gray-200 opacity-70"
                 : "bg-white hover:shadow-md border-gray-100"
             }`}
           >
             <div className="flex justify-between items-start gap-3">
               <div className="flex-grow min-w-0">
-                <p className={`font-semibold text-base truncate ${isBilled ? "text-gray-400" : "text-gray-900"}`}>
+                <p className={`font-semibold text-base truncate ${isPaid ? "text-gray-400" : "text-gray-900"}`}>
                   {a.customer_name}
                   {a.family_member && <span className="text-sm font-normal text-purple-600"> → {a.family_member.name}</span>}
                 </p>
@@ -167,6 +205,16 @@ export default function AppointmentsPage() {
                       {a.family_member.age_group}
                     </span>
                   )}
+                  {isPending && (
+                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-semibold uppercase">
+                      Payment Pending
+                    </span>
+                  )}
+                  {isPaid && (
+                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-semibold uppercase">
+                      Paid
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-gray-600 mt-2 line-clamp-1">
                   <span className="font-medium">Services:</span> {(a.selected_servicesIds || []).map((sid) => serviceMap[sid] || sid).join(", ") || "-"}
@@ -175,7 +223,7 @@ export default function AppointmentsPage() {
                   <span className="font-medium">Staff:</span> {(a.selected_staffIds || []).map((sid) => staffMap[sid] || sid).join(", ") || "-"}
                 </p>
               </div>
-              {!isBilled && (
+              {!isPaid && (
               <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                 <button
                   className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium shadow-sm transition-colors active:scale-95"
@@ -184,15 +232,37 @@ export default function AppointmentsPage() {
                 >
                   Details
                 </button>
-                <div>
-                  <AddActualServicesButton
-                    appointmentId={a.id}
-                    services={services}
-                    staff={staff}
-                    currentStaffMember={currentStaffMember}
-                    onAdded={() => mutate()}
-                  />
-                </div>
+                {isPending && (
+                  <button
+                    className="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-sm transition-colors active:scale-95 flex items-center gap-1"
+                    onClick={() => markAsPaid(a.id)}
+                    disabled={updatingPayment === a.id}
+                  >
+                    {updatingPayment === a.id ? (
+                      <>
+                        <Loader size={12} className="animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={12} />
+                        Mark Paid
+                      </>
+                    )}
+                  </button>
+                )}
+                {!isBilled && (
+                  <div>
+                    <AddActualServicesButton
+                      appointmentId={a.id}
+                      services={services}
+                      staff={staff}
+                      currentStaffMember={currentStaffMember}
+                      currentUser={currentUser}
+                      onAdded={() => mutate()}
+                    />
+                  </div>
+                )}
                 <button
                   className="text-red-600 hover:text-red-700 font-medium text-xs hover:bg-red-50 px-2 py-1 rounded-lg transition"
                   onClick={() => setDeleteConfirm(a.id)}
@@ -267,7 +337,7 @@ export default function AppointmentsPage() {
 }
 
 // Add Actual Services button + modal
-function AddActualServicesButton({ appointmentId, services, staff, currentStaffMember, onAdded }) {
+function AddActualServicesButton({ appointmentId, services, staff, currentStaffMember, currentUser, onAdded }) {
   const [open, setOpen] = React.useState(false)
   return (
     <>
@@ -275,7 +345,7 @@ function AddActualServicesButton({ appointmentId, services, staff, currentStaffM
         className="px-4 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-sm transition-all active:scale-95"
         onClick={() => setOpen(true)}
       >
-        Actuals
+        Services
       </button>
       {open && (
         <ActualServicesModal
@@ -283,6 +353,7 @@ function AddActualServicesButton({ appointmentId, services, staff, currentStaffM
           services={services}
           staff={staff}
           currentStaffMember={currentStaffMember}
+          currentUser={currentUser}
           onClose={() => setOpen(false)}
           onSaved={() => {
             setOpen(false)
@@ -631,10 +702,10 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Last Name</label>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Last Name (Optional)</label>
                       <input
                         className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-                        placeholder="Last name"
+                        placeholder="Last name (optional)"
                         value={customer?.last_name || ""}
                         onChange={(e) => setCustomer({...customer, last_name: e.target.value})}
                       />
@@ -1035,7 +1106,7 @@ function DetailsModal({ appt, onClose }) {
 }
 
 // Actual Services Modal and its sub-components (EditServiceModal, AddServiceModal) unchanged
-function ActualServicesModal({ appointmentId, services, staff, currentStaffMember, onClose, onSaved }) {
+function ActualServicesModal({ appointmentId, services, staff, currentStaffMember, currentUser, onClose, onSaved }) {
   const { data: actuals, mutate } = useSWR(`/api/appointments/${appointmentId}/actual-services`, fetcher)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editRow, setEditRow] = useState(null)
@@ -1046,6 +1117,19 @@ function ActualServicesModal({ appointmentId, services, staff, currentStaffMembe
     if (!Array.isArray(actuals)) return []
     return actuals
   }, [actuals])
+  
+  // Check if user can edit/delete a service
+  const canModifyService = (svc) => {
+    // Admin and receptionist can modify everything
+    if (currentUser?.role === 'admin' || currentUser?.role === 'receptionist') {
+      return true
+    }
+    // Staff can only modify their own services
+    if (currentUser?.role === 'staff' && currentStaffMember) {
+      return svc.doneby_staff_id === currentStaffMember.id
+    }
+    return false
+  }
 
   async function deleteActual(id) {
     await fetch(`/api/appointments/${appointmentId}/actual-services`, {
@@ -1097,59 +1181,88 @@ function ActualServicesModal({ appointmentId, services, staff, currentStaffMembe
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredActuals.map((svc) => (
+              {filteredActuals.map((svc) => {
+                const staffMember = staff.find(st => st.id === svc.doneby_staff_id)
+                const staffName = staffMember?.name || "Unassigned"
+                
+                return (
                 <div
                   key={svc.id}
-                  className="bg-gradient-to-br from-emerald-50 to-blue-50 border-2 border-emerald-200 rounded-xl p-4 hover:shadow-md transition-all"
+                  className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h4 className="font-bold text-emerald-800 text-sm">{svc.service_name}</h4>
-                      <div className="flex flex-wrap gap-2 mt-1.5">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg">
-                          ₹{svc.price}
-                        </span>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-lg ${
-                            svc.status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : svc.status === "in_service"
-                                ? "bg-blue-100 text-blue-800"
-                                : svc.status === "canceled"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {svc.status.replace("_", " ")}
-                        </span>
+                  <div className="p-4">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-3 mb-3 pb-3 border-b border-gray-100">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 text-base truncate">{svc.service_name}</h4>
+                        <p className="text-xs text-gray-500 mt-0.5">Service #{svc.id}</p>
                       </div>
-                      {svc.notes && (
-                        <p className="text-xs text-gray-600 mt-1.5 break-words">
-                          <span className="font-semibold">Notes:</span> {svc.notes}
-                        </p>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full uppercase flex-shrink-0 ${
+                          svc.status === "completed"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : svc.status === "in_service"
+                              ? "bg-blue-100 text-blue-700"
+                              : svc.status === "canceled"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {svc.status === "completed" && <CheckCircle size={12} />}
+                        {svc.status.replace("_", " ")}
+                      </span>
+                    </div>
+
+                    {/* Details */}
+                    <div className="space-y-2 mb-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Price</span>
+                        <span className="text-lg font-bold text-gray-900">₹{svc.price || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Staff</span>
+                        <span className="text-sm font-semibold text-gray-900">{staffName}</span>
+                      </div>
+                      {svc.gst_percentage && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">GST</span>
+                          <span className="text-sm font-medium text-gray-900">{svc.gst_percentage}%</span>
+                        </div>
                       )}
                     </div>
-                    <div className="flex gap-2 ml-3">
-                      <button
-                        className="p-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-600 rounded-lg transition-all"
-                        onClick={() => setEditRow(svc)}
-                        title="Edit"
-                        type="button"
-                      >
-                        <Pencil size={18} />
-                      </button>
-                      <button
-                        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-all"
-                        onClick={() => setDeleteActualConfirm(svc.id)}
-                        title="Delete"
-                        type="button"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+
+                    {/* Notes */}
+                    {svc.notes && (
+                      <div className="bg-amber-50 rounded-lg p-3 mb-3">
+                        <p className="text-xs font-semibold text-amber-700 mb-1">Notes</p>
+                        <p className="text-sm text-amber-900">{svc.notes}</p>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    {canModifyService(svc) && (
+                      <div className="flex gap-2 pt-3 border-t border-gray-100">
+                        <button
+                          className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2"
+                          onClick={() => setEditRow(svc)}
+                          type="button"
+                        >
+                          <Pencil size={14} />
+                          Edit
+                        </button>
+                        <button
+                          className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2"
+                          onClick={() => setDeleteActualConfirm(svc.id)}
+                          type="button"
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>
@@ -1305,10 +1418,10 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
         {/* Staff Selection */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Staff (Optional)
+            Staff {currentStaffMember ? "" : "(Optional)"}
           </label>
           <select
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
             value={form.doneby_staff_id ?? ""}
             onChange={(e) =>
               setForm((f) => ({
@@ -1316,6 +1429,7 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
                 doneby_staff_id: e.target.value === "" ? "" : Number(e.target.value),
               }))
             }
+            disabled={!!currentStaffMember}
           >
             <option value="">No staff assigned</option>
             {staff.map((st) => (
@@ -1324,6 +1438,9 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
               </option>
             ))}
           </select>
+          {currentStaffMember && (
+            <p className="text-xs text-gray-500 mt-1">Staff assignment cannot be changed</p>
+          )}
         </div>
 
         {/* Price */}
@@ -1333,10 +1450,12 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
             type="number"
             step="0.01"
             placeholder="0.00"
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-100 cursor-not-allowed focus:outline-none"
             value={form.price}
-            onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+            readOnly
+            disabled
           />
+          <p className="text-xs text-gray-500 mt-1">Price is determined by the selected service</p>
         </div>
 
         {/* Status */}
@@ -1392,7 +1511,7 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
 function AddServiceModal({ services, staff, currentStaffMember, appointmentId, onClose, onSaved }) {
   const [form, setForm] = React.useState({
     service_id: "",
-    doneby_staff_id: "",
+    doneby_staff_id: currentStaffMember?.id || "",
     price: "",
     notes: "",
     status: "completed",
@@ -1487,10 +1606,10 @@ function AddServiceModal({ services, staff, currentStaffMember, appointmentId, o
         {/* Staff Selection */}
         <div>
           <label className="block text-xs font-semibold text-gray-700 mb-1">
-            Staff (Optional)
+            Staff {currentStaffMember ? "" : "(Optional)"}
           </label>
           <select
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
             value={form.doneby_staff_id ?? ""}
             onChange={(e) =>
               setForm((f) => ({
@@ -1498,6 +1617,7 @@ function AddServiceModal({ services, staff, currentStaffMember, appointmentId, o
                 doneby_staff_id: e.target.value === "" ? "" : Number(e.target.value),
               }))
             }
+            disabled={!!currentStaffMember}
           >
             <option value="">No staff assigned</option>
             {staff.map((st) => (
@@ -1506,6 +1626,9 @@ function AddServiceModal({ services, staff, currentStaffMember, appointmentId, o
               </option>
             ))}
           </select>
+          {currentStaffMember && (
+            <p className="text-xs text-gray-500 mt-1">You can only add services for yourself</p>
+          )}
         </div>
 
         {/* Price */}
@@ -1515,10 +1638,12 @@ function AddServiceModal({ services, staff, currentStaffMember, appointmentId, o
             type="number"
             step="0.01"
             placeholder="0.00"
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
+            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-100 cursor-not-allowed focus:outline-none"
             value={form.price}
-            onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+            readOnly
+            disabled
           />
+          <p className="text-xs text-gray-500 mt-1">Price is determined by the selected service</p>
         </div>
 
         {/* Status */}

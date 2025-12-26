@@ -16,7 +16,7 @@ export default async function Page() {
   }
 
   return (
-    <main className="min-h-dvh flex items-center justify-center pt-10">
+    <main className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-50 to-emerald-100 p-4">
       <LoginForm />
     </main>
   )

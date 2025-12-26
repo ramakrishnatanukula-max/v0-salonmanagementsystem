@@ -7,6 +7,7 @@ type JWTPayload = {
   sub: string // mobile
   role: "admin" | "receptionist" | "staff"
   name?: string | null
+  user_id?: number | null
   exp: number // epoch seconds
 }
 

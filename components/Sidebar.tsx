@@ -21,7 +21,7 @@ export default function Sidebar() {
     { label: "Services", href: "/dashboard/services", icon: ClipboardList, roles: ["admin"] },
     { label: "Categories", href: "/dashboard/services/categories", icon: Layers, roles: ["admin"] },
     { label: "Staff", href: "/dashboard/staff", icon: Users, roles: ["admin"] },
-    { label: "Create Account", href: "/dashboard/signup", icon: Users, roles: ["admin"] },
+    { label: "User Management", href: "/dashboard/signup", icon: Users, roles: ["admin"] },
   ]
 
   // Filter items based on role

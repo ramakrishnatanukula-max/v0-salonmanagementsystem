@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { execute, query } from "@/lib/db"
+import { getCurrentUser } from "@/lib/auth"
 
 type Item = {
   service_id: number
@@ -38,6 +39,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 })
   }
 
+  const currentUser = await getCurrentUser()
   const body = await req.json().catch(() => ({}))
   const items: Item[] = Array.isArray(body?.items) ? body.items : []
   if (!items.length) {
@@ -48,6 +50,13 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   for (const it of items) {
     if (!Number.isFinite(it.service_id)) {
       return NextResponse.json({ error: "service_id is required for each item" }, { status: 400 })
+    }
+    
+    // Staff can only add services with their own staff ID
+    if (currentUser?.role === 'staff' && currentUser?.user_id) {
+      if (!it.doneby_staff_id || Number(it.doneby_staff_id) !== currentUser.user_id) {
+        return NextResponse.json({ error: "Staff can only add services assigned to themselves" }, { status: 403 })
+      }
     }
   }
 
@@ -78,12 +87,24 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
   if (!Number.isFinite(appointmentId)) {
     return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 })
   }
+  
+  const currentUser = await getCurrentUser()
   const body = await req.json().catch(() => ({}))
   const ids: number[] = Array.isArray(body?.ids) ? body.ids : []
   if (!ids.length) {
     return NextResponse.json({ error: "No ids provided" }, { status: 400 })
   }
-  // Only delete rows belonging to this appointment
+  
+  // Staff can only delete their own assigned services
+  if (currentUser?.role === 'staff' && currentUser?.user_id) {
+    const res: any = await execute(
+      `DELETE FROM appointment_actualtaken_services WHERE appointment_id = ? AND doneby_staff_id = ? AND id IN (${ids.map(() => "?").join(",")})`,
+      [appointmentId, currentUser.user_id, ...ids],
+    )
+    return NextResponse.json({ deleted: res.affectedRows || 0 })
+  }
+  
+  // Admin/receptionist can delete any services
   const res: any = await execute(
     `DELETE FROM appointment_actualtaken_services WHERE appointment_id = ? AND id IN (${ids.map(() => "?").join(",")})`,
     [appointmentId, ...ids],
@@ -98,14 +119,36 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (!Number.isFinite(appointmentId)) {
     return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 })
   }
+  
+  const currentUser = await getCurrentUser()
   const body = await req.json().catch(() => ({}))
   const items: any[] = Array.isArray(body?.items) ? body.items : []
   if (!items.length) {
     return NextResponse.json({ error: "No items provided" }, { status: 400 })
   }
+  
   let updated = 0
   for (const it of items) {
     if (!Number.isFinite(it.id)) continue
+    
+    // Staff restrictions
+    if (currentUser?.role === 'staff' && currentUser?.user_id) {
+      // First check if this service belongs to the staff member
+      const existing = await query<any>(
+        `SELECT doneby_staff_id FROM appointment_actualtaken_services WHERE id = ? AND appointment_id = ?`,
+        [it.id, appointmentId]
+      )
+      
+      if (!existing.length || existing[0].doneby_staff_id !== currentUser.user_id) {
+        continue // Skip services not assigned to this staff member
+      }
+      
+      // Staff cannot change the assigned staff ID
+      if ("doneby_staff_id" in it && Number(it.doneby_staff_id) !== currentUser.user_id) {
+        return NextResponse.json({ error: "Staff cannot reassign services to other staff members" }, { status: 403 })
+      }
+    }
+    
     const fields = []
     const values = []
     if ("doneby_staff_id" in it) {
@@ -124,13 +167,28 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       fields.push("status = ?")
       values.push(it.status ?? null)
     }
+    if ("service_id" in it) {
+      fields.push("service_id = ?")
+      values.push(Number(it.service_id))
+    }
     if (!fields.length) continue
-    values.push(appointmentId, it.id)
-    const res: any = await execute(
-      `UPDATE appointment_actualtaken_services SET ${fields.join(", ")} WHERE appointment_id = ? AND id = ?`,
-      values,
-    )
-    updated += res.affectedRows || 0
+    
+    // For staff, add additional WHERE clause
+    if (currentUser?.role === 'staff' && currentUser?.user_id) {
+      values.push(appointmentId, it.id, currentUser.user_id)
+      const res: any = await execute(
+        `UPDATE appointment_actualtaken_services SET ${fields.join(", ")} WHERE appointment_id = ? AND id = ? AND doneby_staff_id = ?`,
+        values,
+      )
+      updated += res.affectedRows || 0
+    } else {
+      values.push(appointmentId, it.id)
+      const res: any = await execute(
+        `UPDATE appointment_actualtaken_services SET ${fields.join(", ")} WHERE appointment_id = ? AND id = ?`,
+        values,
+      )
+      updated += res.affectedRows || 0
+    }
   }
   return NextResponse.json({ updated })
 }

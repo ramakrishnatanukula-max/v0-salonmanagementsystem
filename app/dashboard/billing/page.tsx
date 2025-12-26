@@ -300,15 +300,17 @@ function AppointmentServicesPanel({
       </div>
 
       <button
-        disabled={isBilled}
+        disabled={isPaid}
         className={`mt-3 w-full rounded-lg px-4 py-2 font-semibold text-sm shadow transition-all ${
-          isBilled
+          isPaid
             ? "bg-gray-300 text-gray-600 cursor-not-allowed opacity-60"
+            : isBilled
+            ? "bg-amber-600 text-white hover:bg-amber-700 hover:shadow-md"
             : "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white hover:shadow-md hover:brightness-110"
         }`}
         onClick={() => setShowModal(true)}
       >
-        {isPaid ? "✓ Payment Done" : isBilled ? "Already Billed" : "💳 Proceed to Payment"}
+        {isPaid ? "✓ Payment Done" : isBilled ? "Update Payment Status" : "💳 Proceed to Payment"}
       </button>
 
       {showModal ? (
@@ -422,8 +424,15 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
     e.preventDefault()
     setSaving(true)
     try {
+      // Check if billing already exists (for pending payments)
+      const isBilled = !!(appointment.billing?.id || appointment.billing_id)
+      const isPaid = (appointment.billing?.payment_status || appointment.payment_status) === "paid"
+      
+      // Use PATCH if billing exists and not paid, otherwise POST
+      const method = isBilled && !isPaid ? "PATCH" : "POST"
+      
       const res = await fetch(`/api/appointments/${appointment.id}/billing`, {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           total_amount: total,
@@ -438,7 +447,7 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
       const data = await res.json()
 
       if (res.ok) {
-        onNotify("✅ Billing completed successfully", "success")
+        onNotify(method === "PATCH" ? "✅ Payment status updated successfully" : "✅ Billing completed successfully", "success")
 
         // Send email if checkbox is checked
         if (form.send_email && appointment.customer_email) {

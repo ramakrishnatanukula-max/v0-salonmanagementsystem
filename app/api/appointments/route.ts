@@ -1,10 +1,29 @@
 import { NextResponse } from "next/server"
 import { query, execute } from "@/lib/db"
+import { getCurrentUser } from "@/lib/auth"
 
 export async function GET(req: Request) {
+  const currentUser = await getCurrentUser()
   const { searchParams } = new URL(req.url)
   const date = searchParams.get("date") // YYYY-MM-DD
-  const where = date ? "WHERE DATE(a.scheduled_start)=?" : ""
+  
+  // Build WHERE clause
+  let whereConditions = []
+  let params: any[] = []
+  
+  if (date) {
+    whereConditions.push("DATE(a.scheduled_start)=?")
+    params.push(date)
+  }
+  
+  // For staff role, filter by assigned staff in actual services
+  if (currentUser?.role === 'staff' && currentUser?.user_id) {
+    whereConditions.push(`a.id IN (SELECT DISTINCT appointment_id FROM appointment_actualtaken_services WHERE doneby_staff_id = ?)`)
+    params.push(currentUser.user_id)
+  }
+  
+  const where = whereConditions.length > 0 ? "WHERE " + whereConditions.join(" AND ") : ""
+  
   const rows = await query<any>(
     `SELECT a.*, 
             CONCAT(c.first_name,' ',c.last_name) AS customer_name,
@@ -26,7 +45,7 @@ export async function GET(req: Request) {
      LEFT JOIN appointment_billing ab ON ab.appointment_id=a.id
      ${where}
      ORDER BY a.scheduled_start ASC`,
-    date ? [date] : [],
+    params,
   )
   
   // Transform to include billing and family member objects

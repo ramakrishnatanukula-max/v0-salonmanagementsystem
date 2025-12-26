@@ -13,12 +13,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const { id: idStr } = await params;
   const id = Number(idStr);
   const body = await req.json().catch(() => ({}))
-  const { first_name, last_name, email = null, phone = null, marketing_opt_in = 0 } = body
-  if (!first_name || !last_name)
-    return NextResponse.json({ error: "first_name and last_name required" }, { status: 400 })
+  const { first_name, last_name = "", email = null, phone = null, marketing_opt_in = 0 } = body
+  if (!first_name)
+    return NextResponse.json({ error: "first_name is required" }, { status: 400 })
   await execute("UPDATE customers SET first_name=?, last_name=?, email=?, phone=?, marketing_opt_in=? WHERE id=?", [
     first_name.trim(),
-    last_name.trim(),
+    last_name ? last_name.trim() : "",
     email,
     phone,
     Number(!!marketing_opt_in),

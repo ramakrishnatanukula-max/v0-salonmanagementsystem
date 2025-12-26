@@ -17,11 +17,12 @@ export async function POST(req: Request) {
     }
 
     const users = await query<{
+      id: number
       mobile: string
       password: string
       role: "admin" | "receptionist" | "staff"
       name: string | null
-    }>("SELECT mobile, password, role, name FROM users WHERE mobile = ?", [mobile])
+    }>("SELECT id, mobile, password, role, name FROM users WHERE mobile = ?", [mobile])
     if (users.length === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid password" }, { status: 401 })
     }
 
-    const token = signJWT({ sub: u.mobile, role: u.role, name: u.name || null })
+    const token = signJWT({ sub: u.mobile, role: u.role, name: u.name || null, user_id: u.id })
     await setSessionCookie(token)
     return NextResponse.json({ ok: true })
   } catch (e: any) {
