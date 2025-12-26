@@ -16,7 +16,7 @@ export default function AppointmentsPage() {
   const { data: appts, mutate, isLoading: apptsLoading } = useSWR(`/api/appointments?date=${date}`, fetcher)
   const { data: services, isLoading: servicesLoading } = useSWR("/api/services", fetcher)
   const { data: categories, isLoading: categoriesLoading } = useSWR("/api/categories", fetcher)
-  const { data: staff, isLoading: staffLoading } = useSWR("/api/staff", fetcher)
+  const { data: staff, isLoading: staffLoading } = useSWR("/api/staff/staff-only", fetcher)
   const { data: currentUser } = useSWR("/api/auth/me", fetcher)
   const [showForm, setShowForm] = useState(false)
   const [detailsId, setDetailsId] = useState(null)
@@ -545,7 +545,8 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
           family_member_id: selectedMember?.id || null,
           is_for_self: !selectedMember,
           notes,
-          scheduled_start: createISOFromIST(date, time), // Convert IST to UTC ISO string
+          date: date, // YYYY-MM-DD
+          time: time, // HH:mm
           selected_services: selectedServices, // [{serviceId, staffId}]
         }),
       })
