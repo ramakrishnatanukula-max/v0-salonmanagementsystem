@@ -5,31 +5,24 @@ import { useMemo, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, Users, DollarSign, Zap, Calendar, ArrowRight, Filter } from "lucide-react"
 import LoadingSpinner from "@/components/LoadingSpinner"
+import { formatDateIST, getMonthBoundsIST } from "@/lib/timezone"
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
-function fmtDate(d: Date) {
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, "0")
-  const dd = String(d.getDate()).padStart(2, "0")
-  return `${yyyy}-${mm}-${dd}`
-}
-
-function monthBounds(d: Date) {
-  const start = new Date(d.getFullYear(), d.getMonth(), 1)
-  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0)
-  return { from: fmtDate(start), to: fmtDate(end) }
-}
-
 export default function AnalyticsPage() {
   const [mode, setMode] = useState<"today" | "thisMonth" | "lastMonth" | "day" | "month" | "range">("today")
-  const [day, setDay] = useState<string>(() => fmtDate(new Date()))
+  const [day, setDay] = useState<string>(() => formatDateIST())
   const [month, setMonth] = useState<string>(() => {
     const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const istDate = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }))
+    return `${istDate.getFullYear()}-${String(istDate.getMonth() + 1).padStart(2, "0")}`
   })
-  const [fromDate, setFromDate] = useState<string>(() => fmtDate(new Date(new Date().setDate(new Date().getDate() - 7))))
-  const [toDate, setToDate] = useState<string>(() => fmtDate(new Date()))
+  const [fromDate, setFromDate] = useState<string>(() => {
+    const today = new Date()
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+    return formatDateIST(weekAgo)
+  })
+  const [toDate, setToDate] = useState<string>(() => formatDateIST())
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false)
   const [showHeader, setShowHeader] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
@@ -48,16 +41,16 @@ export default function AnalyticsPage() {
   const { from, to, title } = useMemo(() => {
     const now = new Date()
     if (mode === "today") {
-      const f = fmtDate(now)
+      const f = formatDateIST(now)
       return { from: f, to: f, title: "Today" }
     }
     if (mode === "thisMonth") {
-      const { from, to } = monthBounds(now)
+      const { from, to } = getMonthBoundsIST(now)
       return { from, to, title: "This Month" }
     }
     if (mode === "lastMonth") {
       const last = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const { from, to } = monthBounds(last)
+      const { from, to } = getMonthBoundsIST(last)
       return { from, to, title: "Last Month" }
     }
     if (mode === "day") {
@@ -68,7 +61,7 @@ export default function AnalyticsPage() {
     }
     const [y, m] = month.split("-").map(Number)
     const base = new Date(y, (m || 1) - 1, 1)
-    const { from, to } = monthBounds(base)
+    const { from, to } = getMonthBoundsIST(base)
     return { from, to, title: `Month: ${month}` }
   }, [mode, day, month, fromDate, toDate])
 

@@ -4,6 +4,7 @@ import useSWR from "swr"
 import { X, ChevronDown, ChevronUp, Mail, Check, AlertCircle } from "lucide-react"
 import Toast from "@/components/Toast"
 import LoadingSpinner from "@/components/LoadingSpinner"
+import { formatDateDisplayIST, formatTimeDisplayIST, formatDateTimeIST } from "@/lib/timezone"
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
@@ -165,8 +166,8 @@ export default function BillingPage() {
                       )}
                     </div>
                     <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
-                      <span>📅 {new Date(a.scheduled_start).toLocaleDateString()}</span>
-                      <span>🕐 {new Date(a.scheduled_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                      <span>📅 {formatDateDisplayIST(a.scheduled_start)}</span>
+                      <span>🕐 {formatTimeDisplayIST(a.scheduled_start)}</span>
                       {amount && (
                         <span className="font-semibold text-gray-700">₹{Number(amount || 0).toFixed(2)}</span>
                       )}
@@ -279,7 +280,7 @@ function AppointmentServicesPanel({
           <div className="mt-2 space-y-1 text-sm">
             <div>Amount: <span className="font-bold">₹{Number(appointment.billing?.final_amount || appointment.billing?.total_amount || appointment.final_amount || appointment.total_amount || 0).toFixed(2)}</span></div>
             {(appointment.billing?.payment_method || appointment.payment_method) && <div>Method: <span className="font-semibold capitalize">{appointment.billing?.payment_method || appointment.payment_method}</span></div>}
-            {(appointment.billing?.updated_at || appointment.updated_at) && <div>Date: <span className="text-xs text-gray-600">{new Date(appointment.billing?.updated_at || appointment.updated_at).toLocaleDateString()}</span></div>}
+            {(appointment.billing?.updated_at || appointment.updated_at) && <div>Date: <span className="text-xs text-gray-600">{formatDateDisplayIST(appointment.billing?.updated_at || appointment.updated_at)}</span></div>}
           </div>
         </div>
       )}
@@ -393,7 +394,7 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
         body: JSON.stringify({
           to: appointment.customer_email,
           customer_name: appointment.customer_name,
-          appointment_date: new Date(appointment.scheduled_start).toLocaleDateString(),
+          appointment_date: formatDateTimeIST(appointment.scheduled_start),
           services: servicesBreakdown,
           subtotal: total - servicesBreakdown.reduce((sum: number, s: any) => sum + s.totalTax, 0),
           total: total,
@@ -525,8 +526,7 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
             <div>
               <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Date & Time</div>
               <div className="font-bold text-gray-900 mt-0.5 text-sm">
-                {new Date(appointment.scheduled_start).toLocaleDateString()} •{" "}
-                {new Date(appointment.scheduled_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {formatDateDisplayIST(appointment.scheduled_start)} • {formatTimeDisplayIST(appointment.scheduled_start)}
               </div>
             </div>
           </div>

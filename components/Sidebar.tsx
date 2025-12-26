@@ -20,7 +20,7 @@ export default function Sidebar() {
     { label: "Customers", href: "/dashboard/customers", icon: Users, roles: ["admin", "receptionist"] },
     { label: "Services", href: "/dashboard/services", icon: ClipboardList, roles: ["admin"] },
     { label: "Categories", href: "/dashboard/services/categories", icon: Layers, roles: ["admin"] },
-    { label: "Staff", href: "/dashboard/staff", icon: Users, roles: ["admin"] },
+    { label: "Role Management", href: "/dashboard/staff", icon: Users, roles: ["admin"] },
     { label: "User Management", href: "/dashboard/signup", icon: Users, roles: ["admin"] },
   ]
 

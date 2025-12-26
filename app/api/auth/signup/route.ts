@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { execute, query } from "@/lib/db"
+import * as crypto from "crypto"
 
 type Body = {
   name: string
@@ -8,6 +9,10 @@ type Body = {
   role: "admin" | "receptionist" | "staff"
   services?: number[] // only if role=staff
   password?: string
+}
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex")
 }
 
 export async function POST(req: Request) {
@@ -37,14 +42,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Mobile already registered" }, { status: 409 })
     }
 
-    // NOTE: Currently storing plaintext to match existing login behavior.
-    // Replace with a hash in future (bcrypt) and update login to compare hashes.
+    // Hash the password before storing
+    const hashedPassword = hashPassword(password)
     await execute("INSERT INTO users (mobile, name, email, role, password) VALUES (?, ?, ?, ?, ?)", [
       mobile,
       name,
       email,
       role,
-      password,
+      hashedPassword,
     ])
 
     if (role === "staff" && Array.isArray(body.services) && body.services.length > 0) {

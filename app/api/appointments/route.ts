@@ -6,6 +6,7 @@ export async function GET(req: Request) {
   const currentUser = await getCurrentUser()
   const { searchParams } = new URL(req.url)
   const date = searchParams.get("date") // YYYY-MM-DD
+  const customer_id = searchParams.get("customer_id") // Filter by customer
   
   // Build WHERE clause
   let whereConditions = []
@@ -14,6 +15,11 @@ export async function GET(req: Request) {
   if (date) {
     whereConditions.push("DATE(a.scheduled_start)=?")
     params.push(date)
+  }
+  
+  if (customer_id) {
+    whereConditions.push("a.customer_id=?")
+    params.push(customer_id)
   }
   
   // For staff role, filter by assigned staff in actual services

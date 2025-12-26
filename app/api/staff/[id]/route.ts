@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server"
 import { query, execute } from "@/lib/db"
+import * as crypto from "crypto"
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex")
+}
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: idStr } = await params;
   const id = Number(idStr);
-  const rows = await query<any>("SELECT * FROM staff WHERE id = ?", [id])
+  const rows = await query<any>("SELECT id, name, mobile AS phone, email, role FROM users WHERE id = ?", [id])
   if (!rows.length) return NextResponse.json({ error: "Not found" }, { status: 404 })
   return NextResponse.json(rows[0])
 }
@@ -14,26 +19,36 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const id = Number(idStr);
   const body = await req.json().catch(() => ({}))
   const {
-    first_name,
-    last_name,
+    name,
     email = null,
     phone = null,
-    role = "stylist",
-    is_active = 1,
-    allow_overbooking = 0,
+    role = "staff",
+    password,
   } = body
-  if (!first_name || !last_name)
-    return NextResponse.json({ error: "first_name and last_name required" }, { status: 400 })
+  if (!name || !name.trim())
+    return NextResponse.json({ error: "name is required" }, { status: 400 })
+  
+  // Update user basic info
   await execute(
-    "UPDATE staff SET first_name=?, last_name=?, email=?, phone=?, role=?, is_active=?, allow_overbooking=? WHERE id=?",
-    [first_name.trim(), last_name.trim(), email, phone, role, Number(!!is_active), Number(!!allow_overbooking), id],
+    "UPDATE users SET name=?, email=?, mobile=?, role=? WHERE id=?",
+    [name.trim(), email, phone, role, id],
   )
+  
+  // If password is provided, update it
+  if (password && password.trim()) {
+    const hashedPassword = hashPassword(password.trim())
+    await execute(
+      "UPDATE users SET password=? WHERE id=?",
+      [hashedPassword, id]
+    )
+  }
+  
   return NextResponse.json({ id })
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: idStr } = await params;
   const id = Number(idStr);
-  await execute("DELETE FROM staff WHERE id = ?", [id])
+  await execute("DELETE FROM users WHERE id = ?", [id])
   return NextResponse.json({ ok: true })
 }

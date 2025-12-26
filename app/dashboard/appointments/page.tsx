@@ -7,13 +7,12 @@ import ConfirmDialog from "@/components/ConfirmDialog"
 import LoadingSpinner from "@/components/LoadingSpinner"
 import FamilyMemberSelector from "@/components/FamilyMemberSelector"
 import CategoryServiceSelector from "@/components/CategoryServiceSelector"
+import { formatDateIST, formatDateDisplayIST, formatTimeDisplayIST, formatWeekdayIST, getISTDateTime, createISOFromIST } from "@/lib/timezone"
 
 const fetcher = (u) => fetch(u).then((r) => r.json())
-const fmt = (d) => d.toISOString().slice(0, 10)
-const fmtDisplay = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })
 
 export default function AppointmentsPage() {
-  const [date, setDate] = useState(fmt(new Date()))
+  const [date, setDate] = useState(formatDateIST())
   const { data: appts, mutate, isLoading: apptsLoading } = useSWR(`/api/appointments?date=${date}`, fetcher)
   const { data: services, isLoading: servicesLoading } = useSWR("/api/services", fetcher)
   const { data: categories, isLoading: categoriesLoading } = useSWR("/api/categories", fetcher)
@@ -66,7 +65,7 @@ export default function AppointmentsPage() {
     for (let i = -4; i <= 4; i++) {
       const d = new Date(base)
       d.setDate(base.getDate() + i)
-      out.push(fmt(d))
+      out.push(formatDateIST(d))
     }
     return out
   }, [date])
@@ -151,8 +150,8 @@ export default function AppointmentsPage() {
               onClick={() => setDate(d)}
               style={{ fontSize: 13, minWidth: "70px" }}
             >
-              <span className="font-semibold">{fmtDisplay(d)}</span>
-              <span className="text-[10px] opacity-80">{new Date(d).toLocaleDateString("en-US", { weekday: "short" })}</span>
+              <span className="font-semibold">{formatDateDisplayIST(d)}</span>
+              <span className="text-[10px] opacity-80">{formatWeekdayIST(d)}</span>
             </button>
           ))}
         </div>
@@ -189,7 +188,7 @@ export default function AppointmentsPage() {
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">
-                    {new Date(a.scheduled_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {formatTimeDisplayIST(a.scheduled_start)}
                   </span>
                   <span className={`text-xs px-2 py-0.5 rounded font-medium uppercase ${
                     a.status === "completed"
@@ -365,22 +364,6 @@ function AddActualServicesButton({ appointmentId, services, staff, currentStaffM
   )
 }
 
-const getNowIST = () => {
-  const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const ist = new Date(utc + 5.5 * 60 * 60 * 1000);
-
-  const y = ist.getFullYear();
-  const m = String(ist.getMonth() + 1).padStart(2, "0");
-  const d = String(ist.getDate()).padStart(2, "0");
-  const hh = String(ist.getHours()).padStart(2, "0");
-  const mm = String(ist.getMinutes()).padStart(2, "0");
-
-  return {
-    date: `${y}-${m}-${d}`,   // yyyy-mm-dd for date input [web:4]
-    time: `${hh}:${mm}`,      // HH:mm for time input [web:30]
-  };
-};
 // CLEAN MODALS BELOW
 
 function FormModalContainer({ services, categories, staff, onClose, onCreated, onError }) {
@@ -395,7 +378,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
   const [notes, setNotes] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
   
-  const { date: todayIST, time: nowIST } = getNowIST()
+  const { date: todayIST, time: nowIST } = getISTDateTime()
   const [date, setDate] = useState(todayIST)
   const [time, setTime] = useState(nowIST)
   const isToday = date === todayIST
@@ -562,8 +545,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
           family_member_id: selectedMember?.id || null,
           is_for_self: !selectedMember,
           notes,
-          date,
-          time,
+          scheduled_start: createISOFromIST(date, time), // Convert IST to UTC ISO string
           selected_services: selectedServices, // [{serviceId, staffId}]
         }),
       })
@@ -888,22 +870,26 @@ function DetailsModal({ appt, onClose }) {
   }, [appt?.staff])
   const [edit, setEdit] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState(() => ({
-    status: appt?.status || "",
-    date: appt ? new Date(appt.scheduled_start).toISOString().slice(0, 10) : "",
-    time: appt ? new Date(appt.scheduled_start).toTimeString().slice(0, 5) : "",
-    notes: appt?.notes || "",
-    customer_name: appt?.customer_name || "",
-    phone: appt?.phone || "",
-    email: appt?.email || "",
-  }))
+  const [form, setForm] = useState(() => {
+    const istDateTime = appt ? getISTDateTime(appt.scheduled_start) : { date: "", time: "" };
+    return {
+      status: appt?.status || "",
+      date: istDateTime.date,
+      time: istDateTime.time,
+      notes: appt?.notes || "",
+      customer_name: appt?.customer_name || "",
+      phone: appt?.phone || "",
+      email: appt?.email || "",
+    };
+  })
 
   React.useEffect(() => {
     if (appt) {
+      const istDateTime = getISTDateTime(appt.scheduled_start);
       setForm({
         status: appt.status || "",
-        date: new Date(appt.scheduled_start).toISOString().slice(0, 10),
-        time: new Date(appt.scheduled_start).toTimeString().slice(0, 5),
+        date: istDateTime.date,
+        time: istDateTime.time,
         notes: appt.notes || "",
         customer_name: appt.customer_name || "",
         phone: appt.phone || "",
@@ -917,8 +903,8 @@ function DetailsModal({ appt, onClose }) {
   async function handleSave(e) {
     e.preventDefault()
     setSaving(true)
-    // Combine date and time into ISO string
-    const scheduled_start = new Date(`${form.date}T${form.time}`).toISOString()
+    // Combine date and time into ISO string (treating input as IST)
+    const scheduled_start = createISOFromIST(form.date, form.time)
     await fetch(`/api/appointments/${appt.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

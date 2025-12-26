@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server"
 import { query } from "@/lib/db"
 import { setSessionCookie, signJWT } from "@/lib/auth"
+import * as crypto from "crypto"
 
 type Body = { mobile: string; password: string }
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex")
+}
 
 export async function POST(req: Request) {
   try {
@@ -28,8 +33,10 @@ export async function POST(req: Request) {
     }
 
     const u = users[0]
-    // Simple plaintext check; replace with hash check if passwords are hashed
-    if (u.password !== password) {
+    const hashedPassword = hashPassword(password)
+    
+    // Check both plaintext and hashed password for backward compatibility
+    if (u.password !== password && u.password !== hashedPassword) {
       return NextResponse.json({ error: "Invalid password" }, { status: 401 })
     }
 

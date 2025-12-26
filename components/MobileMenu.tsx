@@ -25,7 +25,10 @@ export default function MobileMenu() {
   const allMenuItems = [
     { icon: ShoppingBag, label: "Services", href: "/dashboard/services", roles: ["admin"] },
     { icon: Layers, label: "Categories", href: "/dashboard/services/categories", roles: ["admin"] },
-    { icon: UserPlus, label: "Create Staff", href: "/dashboard/signup", roles: ["admin"] },
+    { icon: UserPlus, label: "Role Management", href: "/dashboard/staff", roles: ["admin"] },
+    { icon: UserPlus, label: "Staff Creation", href: "/dashboard/signup", roles: ["admin"] },
+    { icon: UserPlus, label: "Customer Management", href: "/dashboard/customers", roles: ["admin", "receptionist", "staff"] },
+
   ]
 
   // Filter menu items based on role
