@@ -4,9 +4,9 @@ import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'UniSalon',
+  title: 'unisalon',
   description: 'Salon Management System',
-  generator: 'UniSalon',
+  generator: 'unisalon',
 }
 
 export default function RootLayout({

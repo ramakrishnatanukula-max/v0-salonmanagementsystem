@@ -45,7 +45,7 @@ export default function LoginForm() {
         <div className="bg-gradient-to-br from-gray-900 to-black rounded-3xl p-5 shadow-2xl transform hover:scale-105 transition-transform duration-300">
           <img
             src="/siteicon.png"
-            alt="UniSalon Logo"
+            alt="unisalon Logo"
             className="w-20 h-20 object-contain"
           />
         </div>
@@ -54,7 +54,7 @@ export default function LoginForm() {
       {/* Title with gradient */}
       <div className="text-center space-y-2 mb-2">
         <h1 className="text-3xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent select-none">
-          UniSalon
+          unisalon
         </h1>
         <p className="text-sm text-gray-500 font-medium">Welcome back! Please sign in to continue</p>
       </div>

@@ -103,12 +103,33 @@ export default function Page() {
   }
 
   return (
-    <main className="min-h-dvh bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 p-4">
-      
+    <main className="min-h-dvh bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
+      {/* Background Decorative Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-gradient-to-br from-indigo-300/30 to-purple-300/30 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-gradient-to-tr from-pink-300/30 to-purple-300/30 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Header */}
+      <header className="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white px-4 py-8 shadow-2xl">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                  <Lock size={28} className="text-white" />
+                </div>
+                Staff Registration
+              </h1>
+              <p className="text-base md:text-lg text-white/90 mt-2">Add new team members to your salon</p>
+            </div>
+          </div>
+        </div>
+      </header>
 
       {/* Form Container */}
-      <div className="flex items-start justify-center pt-4 pb-32">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 w-full max-w-2xl">
+      <div className="relative flex items-start justify-center px-4 pt-8 pb-32">
+        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8 md:p-10 w-full max-w-3xl">
           <SignupForm categories={categories} />
         </div>
       </div>

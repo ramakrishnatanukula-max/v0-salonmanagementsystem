@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { query, execute } from "@/lib/db"
 import { getCurrentUser } from "@/lib/auth"
+import { createUTCDateFromIST } from "@/lib/timezone"
 
 export async function GET(req: Request) {
   const currentUser = await getCurrentUser()
@@ -96,7 +97,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "At least one service is required" }, { status: 400 })
   }
 
-  const scheduled_start = new Date(`${date}T${time}:00`)
+  // Convert IST date/time to UTC for database storage
+  const scheduled_start = createUTCDateFromIST(date, time)
   
   // Extract service IDs and staff IDs for the appointment record
   const selected_servicesIds = selected_services.map(s => s.serviceId)

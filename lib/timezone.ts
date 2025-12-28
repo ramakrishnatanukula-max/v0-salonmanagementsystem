@@ -127,6 +127,29 @@ export function createISOFromIST(dateStr: string, timeStr: string): string {
 }
 
 /**
+ * Create UTC Date object from IST date and time strings
+ * This is for server-side use to properly store IST times in UTC
+ */
+export function createUTCDateFromIST(dateStr: string, timeStr: string): Date {
+  // Parse the IST date and time
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  
+  // Create a date object treating the input as IST
+  // We build the UTC timestamp by calculating: IST time - IST offset = UTC time
+  // IST is UTC+5:30, so UTC = IST - 5:30
+  const istOffsetMs = (5 * 60 + 30) * 60 * 1000; // 5 hours 30 minutes in milliseconds
+  
+  // Create a UTC date with the given values (this treats them as UTC)
+  const dateAsUTC = Date.UTC(year, month - 1, day, hours, minutes, 0, 0);
+  
+  // Subtract IST offset to get the actual UTC time
+  const utcDate = new Date(dateAsUTC - istOffsetMs);
+  
+  return utcDate;
+}
+
+/**
  * Get month bounds in IST
  */
 export function getMonthBoundsIST(date: Date) {

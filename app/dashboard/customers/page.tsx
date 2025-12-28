@@ -36,14 +36,14 @@ export default function CustomersPage() {
   )
 
   // Fetch family members
-  const { data: familyMembers } = useSWR(
+  const { data: familyMembers, isLoading: familyLoading } = useSWR(
     selectedCustomer ? `/api/customers/${selectedCustomer.id}/family-members` : null,
     fetcher,
     { revalidateOnMount: true, dedupingInterval: 0 }
   )
 
   // Fetch appointments history
-  const { data: appointments, mutate: mutateAppointments } = useSWR(
+  const { data: appointments, mutate: mutateAppointments, isLoading: appointmentsLoading } = useSWR(
     selectedCustomer ? `/api/appointments?customer_id=${selectedCustomer.id}` : null,
     fetcher,
     { revalidateOnMount: true, dedupingInterval: 0 }
@@ -421,7 +421,12 @@ export default function CustomersPage() {
               
               {expandedSections.family && (
                 <div className="p-4 md:p-6">
-                  {!familyMembers || familyMembers.length === 0 ? (
+                  {familyLoading ? (
+                    <div className="text-center py-8">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-purple-600 mb-3"></div>
+                      <p className="text-gray-500 text-sm font-medium">Loading family members...</p>
+                    </div>
+                  ) : !familyMembers || familyMembers.length === 0 ? (
                     <p className="text-gray-500 text-center py-4">No family members added</p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -474,7 +479,12 @@ export default function CustomersPage() {
               
               {expandedSections.history && (
                 <div className="p-4 md:p-6">
-                  {!completedAppointments || completedAppointments.length === 0 ? (
+                  {appointmentsLoading ? (
+                    <div className="text-center py-8">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-600 mb-3"></div>
+                      <p className="text-gray-500 text-sm font-medium">Loading appointments...</p>
+                    </div>
+                  ) : !completedAppointments || completedAppointments.length === 0 ? (
                     <p className="text-gray-500 text-center py-4">No completed service history</p>
                   ) : (
                     <div className="space-y-3">

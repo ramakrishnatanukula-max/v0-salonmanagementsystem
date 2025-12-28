@@ -14,6 +14,30 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const id = Number(idStr);
   const body = await req.json().catch(() => ({}))
   const { status, notes, scheduled_start, selected_servicesIds, selected_staffIds } = body
+  
+  // Validate if trying to mark as completed
+  if (status === "completed") {
+    const actualServices = await query<any>(
+      "SELECT id, status FROM appointment_actualtaken_services WHERE appointment_id = ?",
+      [id]
+    )
+    
+    if (actualServices && actualServices.length > 0) {
+      const hasIncompleteServices = actualServices.some(
+        (svc: any) => svc.status !== "completed" && svc.status !== "canceled"
+      )
+      
+      if (hasIncompleteServices) {
+        return NextResponse.json(
+          { 
+            error: "Cannot mark appointment as completed. All services must be either completed or cancelled." 
+          },
+          { status: 400 }
+        )
+      }
+    }
+  }
+  
   await execute(
     "UPDATE appointments SET status=?, notes=?, scheduled_start=?, selected_servicesIds=CAST(? AS JSON), selected_staffIds=CAST(? AS JSON) WHERE id=?",
     [
@@ -46,6 +70,29 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     notes?: string | null
     scheduled_start?: string | Date | null
     scheduled_end?: string | Date | null
+  }
+
+  // Validate if trying to mark as completed
+  if (status === "completed") {
+    const actualServices = await query<any>(
+      "SELECT id, status FROM appointment_actualtaken_services WHERE appointment_id = ?",
+      [id]
+    )
+    
+    if (actualServices && actualServices.length > 0) {
+      const hasIncompleteServices = actualServices.some(
+        (svc: any) => svc.status !== "completed" && svc.status !== "canceled"
+      )
+      
+      if (hasIncompleteServices) {
+        return NextResponse.json(
+          { 
+            error: "Cannot mark appointment as completed. All actual services must be either completed or cancelled." 
+          },
+          { status: 400 }
+        )
+      }
+    }
   }
 
   // Build dynamic update for appointments

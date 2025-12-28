@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import { formatDateIST } from "@/lib/timezone";
 
 export async function GET(req: Request) {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
-  const dateStr = `${yyyy}-${mm}-${dd}`;
+  // Get today's date in IST
+  const dateStr = formatDateIST();
 
   // Show all completed appointments for today with their billing status
   const rows = await query<any>(

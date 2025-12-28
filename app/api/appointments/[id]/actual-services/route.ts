@@ -52,6 +52,14 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       return NextResponse.json({ error: "service_id is required for each item" }, { status: 400 })
     }
     
+    // Validate: Cannot mark as completed without staff assignment
+    if (it.status === "completed" && !it.doneby_staff_id) {
+      return NextResponse.json(
+        { error: "Cannot mark service as completed without assigning a staff member." },
+        { status: 400 }
+      )
+    }
+    
     // Staff can only add services with their own staff ID
     if (currentUser?.role === 'staff' && currentUser?.user_id) {
       if (!it.doneby_staff_id || Number(it.doneby_staff_id) !== currentUser.user_id) {
@@ -70,7 +78,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       Number(it.service_id),
       it.doneby_staff_id != null ? Number(it.doneby_staff_id) : null,
       it.status ?? "completed",
-      it.price != null && it.price !== "" ? Number(it.price) : null,
+      it.price != null ? Number(it.price) : null,
       it.notes ?? null,
     )
   }
@@ -146,6 +154,24 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       // Staff cannot change the assigned staff ID
       if ("doneby_staff_id" in it && Number(it.doneby_staff_id) !== currentUser.user_id) {
         return NextResponse.json({ error: "Staff cannot reassign services to other staff members" }, { status: 403 })
+      }
+    }
+    
+    // Validate: Cannot mark as completed without staff assignment
+    if ("status" in it && it.status === "completed") {
+      // Check current staff assignment
+      const existing = await query<any>(
+        `SELECT doneby_staff_id FROM appointment_actualtaken_services WHERE id = ? AND appointment_id = ?`,
+        [it.id, appointmentId]
+      )
+      
+      const staffId = "doneby_staff_id" in it ? it.doneby_staff_id : (existing.length > 0 ? existing[0].doneby_staff_id : null)
+      
+      if (!staffId) {
+        return NextResponse.json(
+          { error: "Cannot mark service as completed without assigning a staff member." },
+          { status: 400 }
+        )
       }
     }
     

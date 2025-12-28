@@ -126,7 +126,7 @@ export default function AppointmentsPage() {
             <div className="bg-black rounded-xl p-2 shadow-md flex-shrink-0">
               <img
                 src="/siteicon.png"
-                alt="UniSalon Logo"
+                alt="unisalon Logo"
                 className="w-8 h-8 object-contain"
               />
             </div>
@@ -871,6 +871,7 @@ function DetailsModal({ appt, onClose }) {
   }, [appt?.staff])
   const [edit, setEdit] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [toastConfig, setToastConfig] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
   const [form, setForm] = useState(() => {
     const istDateTime = appt ? getISTDateTime(appt.scheduled_start) : { date: "", time: "" };
     return {
@@ -904,9 +905,10 @@ function DetailsModal({ appt, onClose }) {
   async function handleSave(e) {
     e.preventDefault()
     setSaving(true)
+    setToastConfig(null)
     // Combine date and time into ISO string (treating input as IST)
     const scheduled_start = createISOFromIST(form.date, form.time)
-    await fetch(`/api/appointments/${appt.id}`, {
+    const res = await fetch(`/api/appointments/${appt.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -920,6 +922,14 @@ function DetailsModal({ appt, onClose }) {
         },
       }),
     })
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: "Failed to update appointment" }))
+      setToastConfig({ type: "error", message: errorData.error || "Failed to update appointment" })
+      setSaving(false)
+      return
+    }
+    
     setSaving(false)
     setEdit(false)
     if (typeof window !== "undefined") window.location.reload() // or trigger mutate if you want to be more efficient
@@ -1063,7 +1073,7 @@ function DetailsModal({ appt, onClose }) {
             <button
               type="button"
               className="px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 font-medium text-sm hover:bg-gray-50 transition-all"
-              onClick={() => setEdit(false)}
+              onClick={onClose}
               disabled={saving}
             >
               Cancel
@@ -1088,16 +1098,26 @@ function DetailsModal({ appt, onClose }) {
           </div>
         </form>
       </div>
+      
+      {/* Toast Notification */}
+      {toastConfig && (
+        <Toast
+          type={toastConfig.type}
+          message={toastConfig.message}
+          onClose={() => setToastConfig(null)}
+        />
+      )}
     </div>
   )
 }
 
 // Actual Services Modal and its sub-components (EditServiceModal, AddServiceModal) unchanged
 function ActualServicesModal({ appointmentId, services, staff, currentStaffMember, currentUser, onClose, onSaved }) {
-  const { data: actuals, mutate } = useSWR(`/api/appointments/${appointmentId}/actual-services`, fetcher)
+  const { data: actuals, mutate, isLoading } = useSWR(`/api/appointments/${appointmentId}/actual-services`, fetcher)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [deleteActualConfirm, setDeleteActualConfirm] = useState(null)
+  const [toastConfig, setToastConfig] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
 
   // Show all actuals to all users including staff
   const filteredActuals = useMemo(() => {
@@ -1160,7 +1180,12 @@ function ActualServicesModal({ appointmentId, services, staff, currentStaffMembe
 
         {/* Service List */}
         <div className="overflow-y-auto flex-1 p-6">
-          {filteredActuals.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-indigo-600 mb-3"></div>
+              <p className="text-gray-500 text-sm font-medium">Loading services...</p>
+            </div>
+          ) : filteredActuals.length === 0 ? (
             <div className="text-center py-8">
               <CheckCircle size={40} className="mx-auto text-gray-300 mb-3" />
               <p className="text-gray-500 text-base font-medium">No services added yet</p>
@@ -1289,6 +1314,7 @@ function ActualServicesModal({ appointmentId, services, staff, currentStaffMembe
               setEditRow(null)
               await mutate()
             }}
+            onError={(msg) => setToastConfig({ type: "error", message: msg })}
           />
         )}
         {showAddModal && (
@@ -1303,19 +1329,30 @@ function ActualServicesModal({ appointmentId, services, staff, currentStaffMembe
               await mutate()
               if (onSaved) onSaved()
             }}
+            onError={(msg) => setToastConfig({ type: "error", message: msg })}
           />
         )}
       </div>
+      
+      {/* Toast Notification */}
+      {toastConfig && (
+        <Toast
+          type={toastConfig.type}
+          message={toastConfig.message}
+          onClose={() => setToastConfig(null)}
+        />
+      )}
     </div>
   )
 }
 
-function EditServiceModal({ row, services, staff, appointmentId, onClose, onSaved, currentStaffMember }) {
+function EditServiceModal({ row, services, staff, appointmentId, onClose, onSaved, currentStaffMember, onError }) {
   const [form, setForm] = React.useState({
     ...row,
     price: row.price?.toString() || "",
   })
   const [saving, setSaving] = React.useState(false)
+  const [toastConfig, setToastConfig] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
 
   // Auto-populate price when service changes
   React.useEffect(() => {
@@ -1346,10 +1383,19 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
           ],
         }),
       })
-      if (!res.ok) throw new Error("Failed to update")
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Failed to update service" }))
+        const errorMsg = errorData.error || "Failed to update service"
+        setToastConfig({ type: "error", message: errorMsg })
+        if (onError) onError(errorMsg)
+        setSaving(false)
+        return
+      }
       if (onSaved) onSaved()
     } catch {
-      // error handling if needed
+      const errorMsg = "Error updating service"
+      setToastConfig({ type: "error", message: errorMsg })
+      if (onError) onError(errorMsg)
     }
     setSaving(false)
   }
@@ -1447,17 +1493,23 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
 
         {/* Status */}
         <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
-          <select
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-            value={form.status}
-            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-          >
-            <option value="scheduled">Scheduled</option>
-            <option value="in_service">In Service</option>
-            <option value="completed">Completed</option>
-            <option value="canceled">Canceled</option>
-          </select>
+          <label className="block text-xs font-semibold text-gray-700 mb-2">Status</label>
+          <div className="grid grid-cols-2 gap-2">
+            {["scheduled", "in_service", "completed", "canceled"].map((status) => (
+              <button
+                key={status}
+                type="button"
+                className={`px-3 py-2 rounded-lg border-2 font-medium text-xs transition-all ${
+                  form.status === status
+                    ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white border-indigo-700"
+                    : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"
+                }`}
+                onClick={() => setForm((f) => ({ ...f, status }))}
+              >
+                {status === "in_service" ? "In Service" : status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Notes */}
@@ -1491,11 +1543,20 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
           )}
         </button>
       </form>
+      
+      {/* Toast Notification - z-index higher than modal */}
+      {toastConfig && (
+        <Toast
+          type={toastConfig.type}
+          message={toastConfig.message}
+          onClose={() => setToastConfig(null)}
+        />
+      )}
     </div>
   )
 }
 
-function AddServiceModal({ services, staff, currentStaffMember, appointmentId, onClose, onSaved }) {
+function AddServiceModal({ services, staff, currentStaffMember, appointmentId, onClose, onSaved, onError }) {
   const [form, setForm] = React.useState({
     service_id: "",
     doneby_staff_id: currentStaffMember?.id || "",
@@ -1504,6 +1565,7 @@ function AddServiceModal({ services, staff, currentStaffMember, appointmentId, o
     status: "completed",
   })
   const [saving, setSaving] = React.useState(false)
+  const [toastConfig, setToastConfig] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
 
   // Auto-populate price when service changes
   React.useEffect(() => {
@@ -1534,10 +1596,19 @@ function AddServiceModal({ services, staff, currentStaffMember, appointmentId, o
           ],
         }),
       })
-      if (!res.ok) throw new Error("Failed to save")
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Failed to add service" }))
+        const errorMsg = errorData.error || "Failed to add service"
+        setToastConfig({ type: "error", message: errorMsg })
+        if (onError) onError(errorMsg)
+        setSaving(false)
+        return
+      }
       if (onSaved) onSaved()
     } catch {
-      // error handling if needed
+      const errorMsg = "Error adding service"
+      setToastConfig({ type: "error", message: errorMsg })
+      if (onError) onError(errorMsg)
     }
     setSaving(false)
   }
@@ -1635,17 +1706,23 @@ function AddServiceModal({ services, staff, currentStaffMember, appointmentId, o
 
         {/* Status */}
         <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
-          <select
-            className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
-            value={form.status}
-            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-          >
-            <option value="scheduled">Scheduled</option>
-            <option value="in_service">In Service</option>
-            <option value="completed">Completed</option>
-            <option value="canceled">Canceled</option>
-          </select>
+          <label className="block text-xs font-semibold text-gray-700 mb-2">Status</label>
+          <div className="grid grid-cols-2 gap-2">
+            {["scheduled", "in_service", "completed", "canceled"].map((status) => (
+              <button
+                key={status}
+                type="button"
+                className={`px-3 py-2 rounded-lg border-2 font-medium text-xs transition-all ${
+                  form.status === status
+                    ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white border-indigo-700"
+                    : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"
+                }`}
+                onClick={() => setForm((f) => ({ ...f, status }))}
+              >
+                {status === "in_service" ? "In Service" : status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Notes */}
@@ -1680,6 +1757,15 @@ function AddServiceModal({ services, staff, currentStaffMember, appointmentId, o
           )}
         </button>
       </form>
+      
+      {/* Toast Notification - z-index higher than modal */}
+      {toastConfig && (
+        <Toast
+          type={toastConfig.type}
+          message={toastConfig.message}
+          onClose={() => setToastConfig(null)}
+        />
+      )}
     </div>
   )
 }

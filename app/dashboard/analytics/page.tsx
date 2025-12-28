@@ -361,8 +361,10 @@ export default function AnalyticsPage() {
         </div>
       )}
 
+      
+
       {/* Staff Performance */}
-      {staff.length > 0 && (
+      {/* {staff.length > 0 && (
         <div className="bg-white rounded-xl p-4 md:p-5 shadow-sm border border-gray-100">
           <h2 className="text-sm md:text-base font-bold text-gray-900 mb-4">Staff Performance</h2>
           <div className="overflow-x-auto">
@@ -398,7 +400,8 @@ export default function AnalyticsPage() {
             </table>
           </div>
         </div>
-      )}
+      )} */}
+
       </>
       )}
     </main>

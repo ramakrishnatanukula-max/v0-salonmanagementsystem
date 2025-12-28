@@ -54,6 +54,12 @@ export default function CategoryServiceSelector({
   const selectedCategoryName = categories.find((c) => c.id === selectedCategory)?.name || ""
 
   const addService = (service: Service) => {
+    // Check if service is already added
+    const isDuplicate = selectedServices.some(s => s.serviceId === service.id)
+    if (isDuplicate) {
+      return // Don't add duplicate services
+    }
+    
     const newService: SelectedService = {
       serviceId: service.id,
       serviceName: service.name,
@@ -78,20 +84,23 @@ export default function CategoryServiceSelector({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Categories */}
-      <div className="p-4 rounded-xl border-2 border-gray-200 bg-gray-50">
-        <label className="block text-sm font-semibold text-gray-700 mb-3">Categories</label>
-        <div className="flex flex-wrap gap-2">
+      <div className="p-5 rounded-2xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-sm">
+        <label className="block text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide flex items-center gap-2">
+          <div className="w-1.5 h-5 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+          Select Category
+        </label>
+        <div className="flex flex-wrap gap-2.5">
           {categories.map((category) => (
             <button
               key={category.id}
               type="button"
               onClick={() => setSelectedCategory(category.id)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all transform hover:scale-105 active:scale-95 ${
                 selectedCategory === category.id
-                  ? "bg-blue-500 text-white shadow-md"
-                  : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400"
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-200"
+                  : "bg-white text-gray-700 border-2 border-gray-200 hover:border-indigo-300 hover:shadow-md"
               }`}
             >
               {category.name}
@@ -102,75 +111,113 @@ export default function CategoryServiceSelector({
 
       {/* Services for Selected Category */}
       {selectedCategory && (
-        <div className="p-4 rounded-xl border-2 border-gray-200 bg-white space-y-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Select Service and Staff - {selectedCategoryName}
+        <div className="p-5 rounded-2xl border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-sm space-y-3">
+          <label className="block text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide flex items-center gap-2">
+            <div className="w-1.5 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full"></div>
+            {selectedCategoryName} Services
           </label>
           
-          {categoryServices.map((service) => (
-            <div key={service.id} className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => addService(service)}
-                className="flex-1 text-left px-4 py-2 rounded-lg border border-gray-300 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
-              >
-                <span className="font-medium">{service.name}</span>
-                <span className="text-sm text-gray-500 ml-2">₹{service.price}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => addService(service)}
-                className="p-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-600 rounded-lg transition-all"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
-            </div>
-          ))}
+          <div className="space-y-2.5">
+            {categoryServices.map((service) => {
+              const isAdded = selectedServices.some(s => s.serviceId === service.id)
+              return (
+              <div key={service.id} className="flex items-center gap-3 group">
+                <button
+                  type="button"
+                  onClick={() => addService(service)}
+                  disabled={isAdded}
+                  className={`flex-1 text-left px-4 py-3.5 rounded-xl border-2 transition-all ${
+                    isAdded 
+                      ? "border-emerald-200 bg-emerald-50 text-gray-500 cursor-not-allowed"
+                      : "border-gray-200 bg-white hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-md transform hover:-translate-y-0.5"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`font-semibold ${isAdded ? "text-gray-500" : "text-gray-900"}`}>
+                      {service.name}
+                    </span>
+                    <span className={`text-sm font-bold ${isAdded ? "text-gray-400" : "text-indigo-600"}`}>
+                      ₹{service.price}
+                    </span>
+                  </div>
+                  {isAdded && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-emerald-600 font-bold">Already Added</span>
+                    </div>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addService(service)}
+                  disabled={isAdded}
+                  className={`p-3 rounded-xl transition-all transform hover:scale-110 active:scale-95 ${
+                    isAdded
+                      ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                      : "bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-lg shadow-indigo-200"
+                  }`}
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+            )})}
+          </div>
         </div>
       )}
 
       {/* Selected Services with Staff Assignment */}
       {selectedServices.length > 0 && (
-        <div className="p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50 space-y-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Selected Services ({selectedServices.length})
-          </label>
+        <div className="p-5 rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-sm space-y-3">
+          <div className="flex items-center justify-between mb-4">
+            <label className="block text-sm font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
+              <div className="w-1.5 h-5 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full"></div>
+              Selected Services
+            </label>
+            <span className="px-3 py-1 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-md">
+              {selectedServices.length}
+            </span>
+          </div>
           
-          {selectedServices.map((selected, index) => (
-            <div key={index} className="p-3 bg-white rounded-lg border border-gray-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-gray-900">{selected.serviceName}</div>
-                  <div className="text-xs text-gray-500">{selected.categoryName}</div>
+          <div className="space-y-3">
+            {selectedServices.map((selected, index) => (
+              <div key={index} className="p-4 bg-white rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-md transition-all space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-gray-900 text-base truncate">{selected.serviceName}</div>
+                    <div className="text-xs text-gray-500 mt-0.5 px-2 py-0.5 bg-gray-100 rounded-md inline-block">
+                      {selected.categoryName}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeService(index)}
+                    className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-lg transition-all transform hover:scale-110 active:scale-95"
+                    title="Remove service"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeService(index)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
+                    Assign Staff (Optional)
+                  </label>
+                  <select
+                    value={selected.staffId || ""}
+                    onChange={(e) => updateServiceStaff(index, parseInt(e.target.value))}
+                    className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-300 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+                  >
+                    <option value="">No staff assigned</option>
+                    {staff.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name || `${s.first_name || ""} ${s.last_name || ""}`.trim()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Assign Staff (Optional)
-                </label>
-                <select
-                  value={selected.staffId || ""}
-                  onChange={(e) => updateServiceStaff(index, parseInt(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"
-                >
-                  <option value="">No staff assigned</option>
-                  {staff.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name || `${s.first_name || ""} ${s.last_name || ""}`.trim()}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -74,7 +74,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     
     const appointment_actualtaken_services_id = actualServices[0].id;
 
-    // Use final_amount, paid_amount, or total_amount (in that order of preference)
+    // Use final_amount as the actual amount paid
     const actualPaidAmount = final_amount !== undefined ? final_amount : (paid_amount !== undefined ? paid_amount : total_amount);
 
     const res: any = await execute(
@@ -115,6 +115,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const values = [];
 
     const allowedFields = ["total_amount", "paid_amount", "payment_method", "payment_status", "notes"];
+    
+    // Handle final_amount by mapping it to paid_amount
+    if ("final_amount" in body && !("paid_amount" in body)) {
+      body.paid_amount = body.final_amount;
+    }
     
     for (const key of allowedFields) {
       if (key in body) {

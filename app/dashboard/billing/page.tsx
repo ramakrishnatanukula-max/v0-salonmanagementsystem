@@ -336,7 +336,7 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
     total_amount: "",
     discount: "",
     payment_method: "",
-    payment_status: "pending",
+    payment_status: "paid",
     notes: "",
     send_email: true,
   })
@@ -638,18 +638,12 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
             </button>
           )}
 
-          {/* Payment Status */}
+          {/* Payment Status - Fixed as Paid */}
           <div>
             <label className="block font-semibold mb-1 text-gray-800 text-sm">Payment Status</label>
-            <select
-              className="border-2 border-indigo-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 font-medium text-sm"
-              value={form.payment_status}
-              onChange={(e) => setForm((f) => ({ ...f, payment_status: e.target.value }))}
-            >
-              <option value="pending">⏳ Pending</option>
-              <option value="paid">✅ Paid</option>
-              <option value="failed">❌ Failed</option>
-            </select>
+            <div className="border-2 border-emerald-300 bg-emerald-50 rounded-lg px-3 py-2 w-full font-semibold text-sm text-emerald-700 flex items-center gap-2">
+              <span className="text-lg">✅</span> Paid
+            </div>
           </div>
 
           {/* Notes */}
