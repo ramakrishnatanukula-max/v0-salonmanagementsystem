@@ -1113,7 +1113,8 @@ function DetailsModal({ appt, onClose }) {
 
 // Actual Services Modal and its sub-components (EditServiceModal, AddServiceModal) unchanged
 function ActualServicesModal({ appointmentId, services, staff, currentStaffMember, currentUser, onClose, onSaved }) {
-  const { data: actuals, mutate, isLoading } = useSWR(`/api/appointments/${appointmentId}/actual-services`, fetcher)
+  // Request all services (not just completed) for the appointments page
+  const { data: actuals, mutate, isLoading } = useSWR(`/api/appointments/${appointmentId}/actual-services?status=all`, fetcher)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [deleteActualConfirm, setDeleteActualConfirm] = useState(null)

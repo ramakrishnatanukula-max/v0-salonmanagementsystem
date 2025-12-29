@@ -22,7 +22,7 @@ export async function GET(req: Request) {
        ab.updated_at as billing_date,
        COALESCE((SELECT SUM(aas.price) 
                  FROM appointment_actualtaken_services aas 
-                 WHERE aas.appointment_id = a.id), 0) as actual_services_total
+                 WHERE aas.appointment_id = a.id AND aas.status = 'completed'), 0) as actual_services_total
      FROM appointments a
      LEFT JOIN customers c ON a.customer_id = c.id
      LEFT JOIN appointment_billing ab ON ab.appointment_id = a.id

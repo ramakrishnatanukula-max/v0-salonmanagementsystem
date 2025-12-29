@@ -281,7 +281,7 @@ function AppointmentServicesPanel({
             ))}
           </ul>
         ) : (
-          <div className="p-3 text-center text-gray-500 text-sm">No services recorded.</div>
+          <div className="p-3 text-center text-gray-500 text-sm">No completed services to bill.</div>
         )}
       </div>
 

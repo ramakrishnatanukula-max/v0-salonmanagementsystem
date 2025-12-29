@@ -18,16 +18,34 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
     return NextResponse.json({ error: "Invalid appointment id" }, { status: 400 })
   }
 
-  const rows = await query<any>(
-    `SELECT aas.*, 
+  // Check for status filter in query params
+  const url = new URL(req.url)
+  const statusFilter = url.searchParams.get('status')
+  
+  // Build query with optional status filter
+  let sqlQuery = `SELECT aas.*, 
             s.name AS service_name,
             s.gst_percentage
      FROM appointment_actualtaken_services aas
      LEFT JOIN services s ON aas.service_id = s.id
-     WHERE aas.appointment_id = ?
-     ORDER BY aas.id DESC`,
-    [appointmentId],
-  )
+     WHERE aas.appointment_id = ?`
+  
+  const params: any[] = [appointmentId]
+  
+  // For billing purposes, only return completed services by default
+  // Use ?status=all to get all services
+  if (statusFilter && statusFilter !== 'all') {
+    sqlQuery += ` AND aas.status = ?`
+    params.push(statusFilter)
+  } else if (!statusFilter) {
+    // Default: only show completed services for billing
+    sqlQuery += ` AND aas.status = 'completed'`
+  }
+  // If status=all, don't add any status filter
+  
+  sqlQuery += ` ORDER BY aas.id DESC`
+
+  const rows = await query<any>(sqlQuery, params)
   return NextResponse.json(rows)
 }
 
