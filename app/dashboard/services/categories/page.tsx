@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import useSWR from "swr";
-import { Plus, X, AlertTriangle, Check, AlertCircle, CheckCircle2, Loader, Info } from "lucide-react";
+import { Plus, X, AlertTriangle, Check, AlertCircle, CheckCircle2, Loader, Info, Search, Layers, TrendingUp, Sparkles } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -65,15 +65,18 @@ function Toast({
 // Loading Skeleton Component
 function CategorySkeleton() {
   return (
-    <div className="bg-white rounded-xl p-4 shadow-md animate-pulse">
-      <div className="flex justify-between items-center gap-3">
-        <div className="flex-grow space-y-2">
-          <div className="h-5 bg-gray-200 rounded-lg w-3/4"></div>
-          <div className="h-3 bg-gray-100 rounded-lg w-1/2"></div>
+    <div className="bg-white rounded-xl p-5 shadow-md animate-pulse">
+      <div className="flex justify-between items-start gap-3 mb-4">
+        <div className="flex-grow space-y-3">
+          <div className="h-6 bg-gray-200 rounded-lg w-3/4"></div>
+          <div className="h-5 bg-gray-100 rounded-full w-1/2"></div>
         </div>
-        <div className="space-y-2">
-          <div className="h-8 bg-gray-200 rounded-lg w-16"></div>
-          <div className="h-6 bg-gray-100 rounded-lg w-12"></div>
+        <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
+      </div>
+      <div className="pt-2 border-t border-gray-100">
+        <div className="flex gap-2">
+          <div className="flex-1 h-9 bg-gray-200 rounded-lg"></div>
+          <div className="flex-1 h-9 bg-gray-100 rounded-lg"></div>
         </div>
       </div>
     </div>
@@ -82,7 +85,9 @@ function CategorySkeleton() {
 
 export default function CategoriesPage() {
   const { data: dataRaw, isLoading, mutate } = useSWR("/api/categories", fetcher);
+  const { data: servicesRaw } = useSWR("/api/services", fetcher);
   const data = Array.isArray(dataRaw) ? dataRaw : dataRaw ? [dataRaw] : [];
+  const services = Array.isArray(servicesRaw) ? servicesRaw : servicesRaw ? [servicesRaw] : [];
 
   // Modal states
   const [showAddForm, setShowAddForm] = useState(false);
@@ -92,6 +97,28 @@ export default function CategoriesPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Calculate service counts per category
+  const categoryServiceCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    services.forEach((service: any) => {
+      const categoryId = service.category_id;
+      if (categoryId) {
+        counts[categoryId] = (counts[categoryId] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [services]);
+
+  // Filter categories based on search
+  const filteredData = useMemo(() => {
+    if (!searchQuery.trim()) return data;
+    const query = searchQuery.toLowerCase();
+    return data.filter((c: any) => 
+      c.name.toLowerCase().includes(query)
+    );
+  }, [data, searchQuery]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -124,63 +151,152 @@ export default function CategoriesPage() {
   }
 
   return (
-    <main className="p-4 max-w-sm mx-auto relative min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50">
+    <main className="p-3 md:p-6 max-w-7xl mx-auto relative min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50">
       {/* Header */}
       <header
         className={`mb-6 sticky top-4 z-10 bg-white/80 backdrop-blur-md rounded-xl p-4 shadow-sm transition-all duration-300 transform ${
           showHeader ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
         }`}
       >
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent mb-1">
-          Service Categories
-        </h1>
-        <p className="text-sm text-gray-500">Organize your salon services</p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent mb-1">
+              Service Categories
+            </h1>
+            <p className="text-sm text-gray-500">Organize and manage your salon service categories</p>
+          </div>
+          
+          {/* Stats */}
+          <div className="flex items-center gap-4">
+            <div className="bg-gradient-to-br from-indigo-500 to-emerald-500 rounded-lg px-4 py-2 shadow-md">
+              <div className="flex items-center gap-2 text-white">
+                <Layers size={18} />
+                <div className="text-right">
+                  <p className="text-xs font-medium opacity-90">Total</p>
+                  <p className="text-lg font-bold leading-none">{data.length}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </header>
 
+      {/* Search Bar */}
+      <div className="mb-6 max-w-md">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search categories..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all shadow-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Categories List */}
-      <section className="flex flex-col gap-3 mb-32">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-32">
         {isLoading ? (
           <>
             <CategorySkeleton />
             <CategorySkeleton />
             <CategorySkeleton />
           </>
-        ) : data.length === 0 ? (
-          <div className="text-center py-12">
-            <AlertCircle className="mx-auto text-gray-300 mb-3" size={48} />
-            <p className="text-gray-500 font-medium">No categories yet</p>
-            <p className="text-gray-400 text-sm mt-1">Tap the + button to create your first category</p>
+        ) : filteredData.length === 0 ? (
+          <div className="col-span-full">
+            <div className="text-center py-16 px-4">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-indigo-100 to-emerald-100 rounded-full mb-4">
+                {searchQuery ? (
+                  <Search className="text-indigo-600" size={36} />
+                ) : (
+                  <Sparkles className="text-emerald-600" size={36} />
+                )}
+              </div>
+              <h3 className="text-xl font-bold text-gray-700 mb-2">
+                {searchQuery ? "No categories found" : "No categories yet"}
+              </h3>
+              <p className="text-gray-500 max-w-sm mx-auto">
+                {searchQuery 
+                  ? `No categories match "${searchQuery}". Try a different search.`
+                  : "Create your first category to start organizing your salon services"
+                }
+              </p>
+              {!searchQuery && (
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  className="mt-6 px-6 py-3 bg-gradient-to-r from-indigo-600 to-emerald-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all inline-flex items-center gap-2"
+                >
+                  <Plus size={20} />
+                  Create First Category
+                </button>
+              )}
+            </div>
           </div>
         ) : (
-          data.map((c) => (
-            <article
-              key={c.id}
-              className="bg-white rounded-xl p-4 shadow-md hover:shadow-xl transition-all duration-200 border border-gray-100 hover:border-purple-200 hover:-translate-y-0.5"
-              aria-label={`Category ${c.name}`}
-            >
-              <div className="flex justify-between items-center gap-3">
-                <div className="flex-grow">
-                  <p className="font-semibold text-lg text-gray-900">{c.name}</p>
+          filteredData.map((c) => {
+            const serviceCount = categoryServiceCounts[c.id] || 0;
+            return (
+              <article
+                key={c.id}
+                className="group bg-white rounded-xl p-5 shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-indigo-200 hover:-translate-y-1 flex flex-col h-full relative overflow-hidden"
+                aria-label={`Category ${c.name}`}
+              >
+                {/* Decorative gradient */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-600 to-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                <div className="flex flex-col gap-4 flex-grow">
+                  <div className="flex-grow space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-bold text-lg text-gray-900 group-hover:text-indigo-600 transition-colors">
+                        {c.name}
+                      </h3>
+                      <div className="flex-shrink-0 bg-gradient-to-br from-indigo-100 to-emerald-100 px-2 py-1 rounded-lg">
+                        <Layers size={16} className="text-indigo-600" />
+                      </div>
+                    </div>
+                    
+                    {/* Service Count Badge */}
+                    <div className="flex items-center gap-2">
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                        serviceCount > 0 
+                          ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-gray-50 text-gray-500 border border-gray-200'
+                      }`}>
+                        <TrendingUp size={14} />
+                        <span>{serviceCount} {serviceCount === 1 ? 'Service' : 'Services'}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 justify-end pt-2 border-t border-gray-100">
+                    <button
+                      aria-label={`Edit category ${c.name}`}
+                      className="flex-1 md:flex-initial px-4 py-2 text-sm bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-lg font-semibold shadow-sm hover:shadow-md transition-all active:scale-95"
+                      onClick={() => setEditCategory(c)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      aria-label={`Delete category ${c.name}`}
+                      className="flex-1 md:flex-initial text-red-600 hover:text-white hover:bg-red-600 font-semibold text-sm border border-red-200 hover:border-red-600 px-4 py-2 rounded-lg transition-all active:scale-95"
+                      onClick={() => setDeleteCategoryId(c.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <button
-                    aria-label={`Edit category ${c.name}`}
-                    className="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-sm transition-all active:scale-95"
-                    onClick={() => setEditCategory(c)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    aria-label={`Delete category ${c.name}`}
-                    className="text-red-600 hover:text-red-700 font-semibold text-sm hover:bg-red-50 px-2 py-1 rounded-lg transition"
-                    onClick={() => setDeleteCategoryId(c.id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))
+              </article>
+            );
+          })
         )}
       </section>
 
@@ -188,9 +304,10 @@ export default function CategoriesPage() {
       <button
         onClick={() => setShowAddForm(true)}
         aria-label="Add new category"
-        className="fixed bottom-20 sm:bottom-8 right-6 z-50 bg-gradient-to-tr from-indigo-600 to-emerald-500 p-4 rounded-full shadow-2xl text-white hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-300 flex items-center justify-center group"
+        className="fixed bottom-20 sm:bottom-8 right-6 z-50 bg-gradient-to-tr from-indigo-600 to-emerald-500 p-4 rounded-full shadow-2xl text-white hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300 flex items-center justify-center group"
       >
         <Plus size={28} className="group-hover:rotate-90 transition-transform duration-300" />
+        <span className="sr-only">Add new category</span>
       </button>
 
       {/* Modals */}
@@ -323,20 +440,30 @@ function CategoryFormModal({
           <X size={24} />
         </button>
 
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent text-center mb-2">
-          {initialData ? "✏️ Edit Category" : "➕ Add New Category"}
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent text-center mb-4">
+          {initialData ? "✏️ Edit Category" : "✨ Add New Category"}
         </h2>
+
+        <p className="text-center text-gray-600 text-sm mb-4">
+          {initialData 
+            ? "Update the category details below" 
+            : "Create a new category to organize your services"
+          }
+        </p>
 
         {/* Category Name */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Category Name *</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+            <Layers size={16} className="text-indigo-600" />
+            Category Name *
+          </label>
           <input
-            className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 transition ${
+            className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 transition ${
               errors.name
                 ? "border-red-400 focus:ring-red-300 bg-red-50"
                 : "border-gray-300 focus:ring-indigo-400 focus:border-indigo-400"
             }`}
-            placeholder="e.g., Hair Services, Massage"
+            placeholder="e.g., Hair Services, Spa & Massage, Nail Art"
             value={form.name}
             onChange={(e) => {
               setForm((f) => ({ ...f, name: e.target.value }));
@@ -345,24 +472,36 @@ function CategoryFormModal({
             required
             autoFocus
             spellCheck={false}
+            maxLength={50}
           />
-          {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+          {errors.name && (
+            <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1">
+              <AlertCircle size={12} />
+              {errors.name}
+            </p>
+          )}
+          {!errors.name && form.name && (
+            <p className="text-xs text-gray-500 mt-1.5">
+              {form.name.length}/50 characters
+            </p>
+          )}
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={loading}
-          className="bg-gradient-to-r from-indigo-600 to-emerald-600 text-white rounded-lg py-3 font-bold shadow-lg hover:shadow-xl hover:brightness-110 disabled:opacity-70 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-2"
+          disabled={loading || !form.name.trim()}
+          className="bg-gradient-to-r from-indigo-600 to-emerald-600 text-white rounded-xl py-3.5 font-bold shadow-lg hover:shadow-xl hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-2"
         >
           {loading ? (
             <>
-              <Loader size={18} className="animate-spin" />
-              {initialData ? "Saving..." : "Creating..."}
+              <Loader size={20} className="animate-spin" />
+              {initialData ? "Saving Changes..." : "Creating Category..."}
             </>
           ) : (
             <>
-              {initialData ? "Save Changes" : "Add Category"}
+              <Check size={20} strokeWidth={2.5} />
+              {initialData ? "Save Changes" : "Create Category"}
             </>
           )}
         </button>
