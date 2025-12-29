@@ -3,7 +3,7 @@
 import type React from "react"
 
 import useSWR from "swr"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { User, Mail, Phone, Shield, Pencil, Trash2, X, Check, Lock } from "lucide-react"
 import Toast from "@/components/Toast"
 import ConfirmDialog from "@/components/ConfirmDialog"
@@ -18,9 +18,22 @@ export default function StaffPage() {
   const [edit, setEdit] = useState<any>({})
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
   const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
+  const [showHeader, setShowHeader] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
   
   // Check if current user is admin
   const isAdmin = currentUser?.role === "admin"
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      setShowHeader(currentScrollY <= lastScrollY || currentScrollY <= 10)
+      setLastScrollY(currentScrollY)
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [lastScrollY])
   async function save(id: number) {
     await fetch(`/api/staff/${id}`, {
       method: "PUT",
@@ -43,26 +56,30 @@ export default function StaffPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 md:p-6">
       {/* Header */}
-      <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white px-4 py-6 shadow-lg">
-        <div className="max-w-screen-lg mx-auto">
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-            <User size={32} />
-            Staff Management
-          </h1>
-          <p className="text-sm md:text-base text-white/90 mt-2">Update staff, receptionist, and admin details and credentials</p>
+      <div className={`mb-6 sticky top-4 z-10 bg-white/80 backdrop-blur-md rounded-xl p-4 shadow-sm max-w-screen-lg mx-auto transition-all duration-300 transform ${
+        showHeader ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
+      }`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <User className="w-8 h-8 text-indigo-600" />
+              Staff Management
+            </h1>
+            <p className="text-xs md:text-sm text-gray-600 mt-1">Manage staff, receptionist, and admin details</p>
+          </div>
         </div>
-      </header>
+      </div>
       
-      <div className="max-w-screen-lg mx-auto px-4 py-6 pb-24">
+      <div className="max-w-screen-lg mx-auto px-4 pb-24">
         {isLoading && <LoadingSpinner message="Loading staff..." />}
         
         {!isLoading && (
         <>
         {/* Info message for non-admin users */}
         {!isAdmin && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 text-blue-700 rounded-xl p-4 mb-6 shadow-sm">
+          <div className="bg-gradient-to-r from-indigo-50 to-emerald-50 border-2 border-indigo-200 text-indigo-700 rounded-xl p-4 mb-6 shadow-sm">
             <p className="font-semibold flex items-center gap-2">
               <Shield size={18} />
               Limited Access

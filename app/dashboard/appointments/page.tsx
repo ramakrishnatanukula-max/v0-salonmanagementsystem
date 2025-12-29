@@ -218,9 +218,9 @@ export default function AppointmentsPage() {
                 <p className="text-xs text-gray-600 mt-2 line-clamp-1">
                   <span className="font-medium">Services:</span> {(a.selected_servicesIds || []).map((sid) => serviceMap[sid] || sid).join(", ") || "-"}
                 </p>
-                <p className="text-xs text-gray-600 line-clamp-1">
+                {/* <p className="text-xs text-gray-600 line-clamp-1">
                   <span className="font-medium">Staff:</span> {(a.selected_staffIds || []).map((sid) => staffMap[sid] || sid).join(", ") || "-"}
-                </p>
+                </p> */}
               </div>
               {!isPaid && (
               <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
@@ -262,12 +262,12 @@ export default function AppointmentsPage() {
                     />
                   </div>
                 )}
-                <button
+                {/* <button
                   className="text-red-600 hover:text-red-700 font-medium text-xs hover:bg-red-50 px-2 py-1 rounded-lg transition"
                   onClick={() => setDeleteConfirm(a.id)}
                 >
                   Delete
-                </button>
+                </button> */}
               </div>
               )}
             </div>
@@ -1166,7 +1166,7 @@ function ActualServicesModal({ appointmentId, services, staff, currentStaffMembe
         <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-emerald-600 px-6 py-3 flex items-center justify-between z-10">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <CheckCircle size={20} />
-            Actual Services
+            Services
           </h3>
           <button
             onClick={onClose}
@@ -1267,7 +1267,7 @@ function ActualServicesModal({ appointmentId, services, staff, currentStaffMembe
                           onClick={() => setDeleteActualConfirm(svc.id)}
                           type="button"
                         >
-                          <Trash2 size={14} />
+                          <X size={14} />
                           Delete
                         </button>
                       </div>
@@ -1465,14 +1465,19 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
             disabled={!!currentStaffMember}
           >
             <option value="">No staff assigned</option>
-            {staff.map((st) => (
-              <option key={st.id} value={st.id}>
-                {st.name || `${st.first_name || ""} ${st.last_name || ""}`.trim()}
-              </option>
-            ))}
+            {staff
+              .filter((st) => !form.service_id || !st.service_ids || st.service_ids.length === 0 || st.service_ids.includes(Number(form.service_id)))
+              .map((st) => (
+                <option key={st.id} value={st.id}>
+                  {st.name || `${st.first_name || ""} ${st.last_name || ""}`.trim()}
+                </option>
+              ))}
           </select>
           {currentStaffMember && (
             <p className="text-xs text-gray-500 mt-1">Staff assignment cannot be changed</p>
+          )}
+          {!currentStaffMember && form.service_id && staff.filter((st) => !st.service_ids || st.service_ids.length === 0 || st.service_ids.includes(Number(form.service_id))).length === 0 && (
+            <p className="text-xs text-amber-600 mt-1">⚠️ No staff available for this service</p>
           )}
         </div>
 
@@ -1678,14 +1683,19 @@ function AddServiceModal({ services, staff, currentStaffMember, appointmentId, o
             disabled={!!currentStaffMember}
           >
             <option value="">No staff assigned</option>
-            {staff.map((st) => (
-              <option key={st.id} value={st.id}>
-                {st.name || `${st.first_name || ""} ${st.last_name || ""}`.trim()}
-              </option>
-            ))}
+            {staff
+              .filter((st) => !form.service_id || !st.service_ids || st.service_ids.length === 0 || st.service_ids.includes(Number(form.service_id)))
+              .map((st) => (
+                <option key={st.id} value={st.id}>
+                  {st.name || `${st.first_name || ""} ${st.last_name || ""}`.trim()}
+                </option>
+              ))}
           </select>
           {currentStaffMember && (
             <p className="text-xs text-gray-500 mt-1">You can only add services for yourself</p>
+          )}
+          {!currentStaffMember && form.service_id && staff.filter((st) => !st.service_ids || st.service_ids.length === 0 || st.service_ids.includes(Number(form.service_id))).length === 0 && (
+            <p className="text-xs text-amber-600 mt-1">⚠️ No staff available for this service</p>
           )}
         </div>
 

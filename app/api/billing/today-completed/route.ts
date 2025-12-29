@@ -6,7 +6,7 @@ export async function GET(req: Request) {
   // Get today's date in IST
   const dateStr = formatDateIST();
 
-  // Show all completed appointments for today with their billing status
+  // Show all completed appointments for today with their billing status and actual services total
   const rows = await query<any>(
     `SELECT 
        a.*,
@@ -19,7 +19,10 @@ export async function GET(req: Request) {
        ab.payment_method,
        ab.payment_status,
        ab.notes as billing_notes,
-       ab.updated_at as billing_date
+       ab.updated_at as billing_date,
+       COALESCE((SELECT SUM(aas.price) 
+                 FROM appointment_actualtaken_services aas 
+                 WHERE aas.appointment_id = a.id), 0) as actual_services_total
      FROM appointments a
      LEFT JOIN customers c ON a.customer_id = c.id
      LEFT JOIN appointment_billing ab ON ab.appointment_id = a.id
@@ -31,6 +34,7 @@ export async function GET(req: Request) {
   // Transform to match expected structure
   const enrichedRows = (rows || []).map((row: any) => ({
     ...row,
+    actual_services_total: Number(row.actual_services_total || 0),
     billing: row.billing_id ? {
       id: row.billing_id,
       total_amount: row.total_amount,

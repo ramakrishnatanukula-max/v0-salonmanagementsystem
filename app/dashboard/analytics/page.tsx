@@ -3,7 +3,7 @@
 import useSWR from "swr"
 import { useMemo, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, Users, DollarSign, Zap, Calendar, ArrowRight, Filter } from "lucide-react"
+import { TrendingUp, Users, DollarSign, Zap, Calendar, ArrowRight, Filter, X } from "lucide-react"
 import LoadingSpinner from "@/components/LoadingSpinner"
 import { formatDateIST, getMonthBoundsIST } from "@/lib/timezone"
 
@@ -69,6 +69,7 @@ export default function AnalyticsPage() {
   const kpis = data?.kpis || { appointments: 0, completed: 0, revenue: 0, performedRevenue: 0, servicesPerformed: 0 }
   const statusData = Array.isArray(data?.status) ? data.status : []
   const paymentStatusData = Array.isArray(data?.paymentStatus) ? data.paymentStatus : []
+  const billingStats = data?.billingStats || { billed: 0, unbilled: 0, in_service: 0, canceled: 0 }
   const topServices = Array.isArray(data?.topServices) ? data.topServices : []
   const staff = Array.isArray(data?.staff) ? data.staff : []
 
@@ -222,7 +223,7 @@ export default function AnalyticsPage() {
           </div>
           <div className="text-2xl md:text-3xl font-bold text-gray-900">{kpis.appointments}</div>
           <p className="text-xs text-gray-500 mt-1">scheduled</p>
-          <div className="mt-3 h-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full"></div>
+          <div className="mt-3 h-1 bg-gradient-to-r from-indigo-600 to-emerald-600 rounded-full"></div>
         </div>
 
         {/* Completed Card */}
@@ -267,6 +268,61 @@ export default function AnalyticsPage() {
           <div className="text-2xl md:text-3xl font-bold text-gray-900">{kpis.servicesPerformed}</div>
           <p className="text-xs text-gray-500 mt-1">performed</p>
           <div className="mt-3 h-1 bg-gradient-to-r from-pink-400 to-pink-600 rounded-full"></div>
+        </div>
+      </div>
+
+      {/* Billing Status Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+        {/* Billed Appointments */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs md:text-sm text-gray-600 font-medium">Billed</h3>
+            <div className="p-2 bg-emerald-100 rounded-lg">
+              <DollarSign className="w-4 h-4 text-emerald-600" />
+            </div>
+          </div>
+          <div className="text-2xl md:text-3xl font-bold text-emerald-600">{billingStats.billed}</div>
+          <p className="text-xs text-gray-500 mt-1">appointments</p>
+          <div className="mt-3 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full"></div>
+        </div>
+
+        {/* Unbilled Appointments */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs md:text-sm text-gray-600 font-medium">Unbilled</h3>
+            <div className="p-2 bg-amber-100 rounded-lg">
+              <Calendar className="w-4 h-4 text-amber-600" />
+            </div>
+          </div>
+          <div className="text-2xl md:text-3xl font-bold text-amber-600">{billingStats.unbilled}</div>
+          <p className="text-xs text-gray-500 mt-1">completed</p>
+          <div className="mt-3 h-1 bg-gradient-to-r from-amber-400 to-amber-600 rounded-full"></div>
+        </div>
+
+        {/* In Service Appointments */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs md:text-sm text-gray-600 font-medium">In Service</h3>
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Zap className="w-4 h-4 text-blue-600" />
+            </div>
+          </div>
+          <div className="text-2xl md:text-3xl font-bold text-blue-600">{billingStats.in_service}</div>
+          <p className="text-xs text-gray-500 mt-1">ongoing</p>
+          <div className="mt-3 h-1 bg-gradient-to-r from-indigo-600 to-emerald-600 rounded-full"></div>
+        </div>
+
+        {/* Canceled Appointments */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs md:text-sm text-gray-600 font-medium">Canceled</h3>
+            <div className="p-2 bg-red-100 rounded-lg">
+              <X className="w-4 h-4 text-red-600" />
+            </div>
+          </div>
+          <div className="text-2xl md:text-3xl font-bold text-red-600">{billingStats.canceled}</div>
+          <p className="text-xs text-gray-500 mt-1">appointments</p>
+          <div className="mt-3 h-1 bg-gradient-to-r from-red-400 to-red-600 rounded-full"></div>
         </div>
       </div>
 
@@ -361,7 +417,7 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      
+
 
       {/* Staff Performance */}
       {/* {staff.length > 0 && (

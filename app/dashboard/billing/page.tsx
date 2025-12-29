@@ -3,6 +3,7 @@ import React, { useState } from "react"
 import useSWR from "swr"
 import { X, ChevronDown, ChevronUp, Mail, Check, AlertCircle } from "lucide-react"
 import Toast from "@/components/Toast"
+import ConfirmDialog from "@/components/ConfirmDialog"
 import LoadingSpinner from "@/components/LoadingSpinner"
 import { formatDateDisplayIST, formatTimeDisplayIST, formatDateTimeIST } from "@/lib/timezone"
 
@@ -15,18 +16,15 @@ function useActuals(appointmentId: number, enabled: boolean) {
 }
 
 function computeTotals(items: any[]) {
-  let subtotal = 0
-  let tax = 0
+  let total = 0
   for (const it of items || []) {
     const price = Number(it.price || 0)
-    const gst = Number(it.gst_percentage || 0)
-    subtotal += price
-    tax += price * (gst / 100)
+    total += price
   }
   return {
-    subtotal,
-    tax,
-    total: subtotal + tax,
+    subtotal: total,
+    tax: 0, // Tax is already included in price
+    total: total,
   }
 }
 
@@ -40,19 +38,21 @@ export default function BillingPage() {
     message: string
   } | null>(null)
 
-  // Calculate billing summary
+  // Calculate billing summary from actual services
   const appointmentsList = Array.isArray(appts) ? appts : []
   
+  // Calculate total invoiced from actual_services_total (which includes all actual services performed)
   const totalBilled = appointmentsList.reduce((sum: number, a: any) => {
-    // Handle both nested billing object and flat structure
-    const amount = a.billing?.final_amount || a.billing?.total_amount || a.final_amount || a.total_amount || 0
+    // Use actual_services_total if available (from API), otherwise use billing amount
+    const amount = a.actual_services_total || a.billing?.final_amount || a.billing?.total_amount || a.final_amount || a.total_amount || 0
     return sum + Number(amount || 0)
   }, 0)
   
   const totalPaid = appointmentsList.reduce((sum: number, a: any) => {
     const status = a.billing?.payment_status || a.payment_status
     if (status === "paid") {
-      const amount = a.billing?.final_amount || a.billing?.total_amount || a.final_amount || a.total_amount || 0
+      // Use actual_services_total for paid amount calculation too
+      const amount = a.actual_services_total || a.billing?.final_amount || a.billing?.total_amount || a.final_amount || a.total_amount || 0
       return sum + Number(amount || 0)
     }
     return sum
@@ -98,12 +98,6 @@ export default function BillingPage() {
               <div className="text-xs text-emerald-600 mt-0.5">✓ {appointmentsList.filter((a: any) => a.billing?.payment_status === "paid").length} done</div>
             </div>
 
-            {/* Pending */}
-            <div className="rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-300 p-3">
-              <div className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Pending</div>
-              <div className="text-lg font-bold text-orange-900 mt-1">₹{totalPending.toFixed(2)}</div>
-              <div className="text-xs text-orange-600 mt-0.5">⏳ {pendingBilling} pending</div>
-            </div>
 
             {/* Completion Status */}
             <div className="rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-300 p-3">
@@ -236,12 +230,20 @@ function AppointmentServicesPanel({
   const isBilled = !!(appointment.billing?.id || appointment.billing_id)
   const isPaid = (appointment.billing?.payment_status || appointment.payment_status) === "paid"
 
-  // Calculate tax per item for display
+  // Calculate base amount and GST from total price (price includes GST)
   const itemsWithTax = (Array.isArray(items) ? items : []).map((it: any) => {
-    const price = Number(it.price || 0)
-    const gst = Number(it.gst_percentage || 0)
-    const lineTax = price * (gst / 100)
-    return { ...it, lineTax, lineTotal: price + lineTax }
+    const totalPrice = Number(it.price || 0)
+    const gstPercentage = Number(it.gst_percentage || 0)
+    // Calculate base amount: total / (1 + gst%/100)
+    const baseAmount = gstPercentage > 0 ? totalPrice / (1 + gstPercentage / 100) : totalPrice
+    const gstAmount = totalPrice - baseAmount
+    return { 
+      ...it, 
+      baseAmount, 
+      gstAmount, 
+      gstPercentage,
+      lineTotal: totalPrice 
+    }
   })
 
   return (
@@ -257,10 +259,22 @@ function AppointmentServicesPanel({
                   <div className="flex-1">
                     <div className="font-semibold text-sm text-gray-900">{it.service_name}</div>
                     {it.notes && <div className="text-xs text-gray-600 mt-1">📝 {it.notes}</div>}
+                    <div className="text-xs text-gray-600 mt-1.5 space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span>Base Amount:</span>
+                        <span className="font-semibold">₹{it.baseAmount.toFixed(2)}</span>
+                      </div>
+                      {it.gstPercentage > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span>GST ({it.gstPercentage}%):</span>
+                          <span className="font-semibold text-blue-600">₹{it.gstAmount.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <div className="font-bold text-sm text-gray-900">₹{it.lineTotal.toFixed(2)}</div>
-                    <div className="text-xs text-gray-500">incl. tax</div>
+                    <div className="text-xs text-emerald-600 font-semibold">Total</div>
                   </div>
                 </div>
               </li>
@@ -286,13 +300,31 @@ function AppointmentServicesPanel({
       )}
 
       {/* Totals Summary */}
-      <div className="mt-4 space-y-3">
-        <div className="rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-300 p-3">
-          <div className="text-xs font-bold text-blue-700 uppercase tracking-wide">Total Amount</div>
-          <div className="font-bold text-blue-900 text-xl mt-1">₹{totals.total.toFixed(2)}</div>
-        </div>
+      <div className="mt-4 space-y-2">
+        {itemsWithTax.length > 0 && (() => {
+          const totalBase = itemsWithTax.reduce((sum, it) => sum + it.baseAmount, 0)
+          const totalGST = itemsWithTax.reduce((sum, it) => sum + it.gstAmount, 0)
+          return (
+            <div className="rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-300 p-3 space-y-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-700">Base Amount:</span>
+                <span className="font-semibold text-gray-900">₹{totalBase.toFixed(2)}</span>
+              </div>
+              {totalGST > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-700">Total GST:</span>
+                  <span className="font-semibold text-blue-600">₹{totalGST.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="pt-2 border-t border-gray-300 flex justify-between items-center">
+                <span className="text-sm font-bold text-gray-800">Grand Total:</span>
+                <span className="font-bold text-xl text-gray-900">₹{totals.total.toFixed(2)}</span>
+              </div>
+            </div>
+          )
+        })()}
 
-        {!isBilled && (
+        {!isBilled && itemsWithTax.length > 0 && (
           <div className="rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 p-4 shadow text-white">
             <div className="text-xs font-semibold opacity-90">Amount to Pay</div>
             <div className="font-bold text-2xl mt-1">₹{totals.total.toFixed(2)}</div>
@@ -343,19 +375,16 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
   const [saving, setSaving] = useState(false)
   const [emailSending, setEmailSending] = useState(false)
   const [showQR, setShowQR] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   React.useEffect(() => {
     if (Array.isArray(actuals) && actuals.length > 0 && !form.total_amount) {
-      // Calculate subtotal and tax from actual services (total already includes tax)
-      let subtotal = 0
-      let totalTax = 0
+      // Price already includes GST, so just sum up all prices
+      let total = 0
       for (const service of actuals) {
         const price = Number(service.price || 0)
-        const gst = Number(service.gst_percentage || 0)
-        subtotal += price
-        totalTax += price * (gst / 100)
+        total += price
       }
-      const total = subtotal + totalTax
       setForm((f) => ({ ...f, total_amount: String(total) }))
     }
   }, [actuals])
@@ -364,17 +393,19 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
   const discountAmount = Number(form.discount || 0)
   const finalAmount = Math.max(0, total - discountAmount)
 
-  // Calculate detailed breakdown for each service
+  // Calculate detailed breakdown for each service (price already includes GST)
   const servicesBreakdown = (Array.isArray(actuals) ? actuals : []).map((it: any) => {
-    const price = Number(it.price || 0)
+    const totalPrice = Number(it.price || 0)
     const gst = Number(it.gst_percentage || 0)
-    const gstAmount = price * (gst / 100)
+    // Calculate base amount: total / (1 + gst%/100)
+    const baseAmount = gst > 0 ? totalPrice / (1 + gst / 100) : totalPrice
+    const gstAmount = totalPrice - baseAmount
     return {
       ...it,
-      price,
+      price: baseAmount,
       gst,
       totalTax: gstAmount,
-      lineTotal: price + gstAmount,
+      lineTotal: totalPrice,
     }
   })
 
@@ -421,8 +452,13 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
     }
   }
 
-  async function handleSave(e: any) {
+  function handleSubmit(e: any) {
     e.preventDefault()
+    setShowConfirm(true)
+  }
+
+  async function handleSave() {
+    setShowConfirm(false)
     setSaving(true)
     try {
       // Check if billing already exists (for pending payments)
@@ -505,7 +541,7 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
         <form
           className="bg-white rounded-xl shadow-2xl p-4 w-full max-w-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
-          onSubmit={handleSave}
+          onSubmit={handleSubmit}
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 pb-3">
@@ -704,6 +740,15 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
             </button>
           </div>
         </form>
+      )}
+      
+      {showConfirm && (
+        <ConfirmDialog
+          title="Complete Billing"
+          message={`Are you sure you want to complete billing for ${appointment.customer_name}?\n\nFinal Amount: ₹${finalAmount.toFixed(2)}\nPayment Method: ${form.payment_method || 'Not selected'}`}
+          onConfirm={handleSave}
+          onCancel={() => setShowConfirm(false)}
+        />
       )}
     </div>
   )

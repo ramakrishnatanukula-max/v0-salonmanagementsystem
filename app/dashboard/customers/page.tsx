@@ -2,7 +2,7 @@
 
 import type React from "react"
 import useSWR from "swr"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, User, Phone, Mail, Users, History, TrendingUp, Calendar, X, ChevronDown, ChevronUp, Scissors, DollarSign, Clock, IndianRupee, FileText, ChevronLeft, ChevronRight } from "lucide-react"
 import Toast from "@/components/Toast"
 import LoadingSpinner from "@/components/LoadingSpinner"
@@ -27,6 +27,19 @@ export default function CustomersPage() {
     analytics: true
   })
   const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
+  const [showHeader, setShowHeader] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      setShowHeader(currentScrollY <= lastScrollY || currentScrollY <= 10)
+      setLastScrollY(currentScrollY)
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [lastScrollY])
 
   // Fetch customer details when selected
   const { data: customerDetails, isLoading: detailsLoading } = useSWR(
@@ -145,19 +158,23 @@ export default function CustomersPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 md:p-6">
       {/* Header */}
-      <header className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white px-4 py-6 shadow-lg">
-        <div className="max-w-screen-xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-            <Users size={32} />
-            Customer Management
-          </h1>
-          <p className="text-sm md:text-base text-white/90 mt-2">Search and view complete customer information</p>
+      <div className={`mb-6 sticky top-4 z-10 bg-white/80 backdrop-blur-md rounded-xl p-4 shadow-sm max-w-screen-xl mx-auto transition-all duration-300 transform ${
+        showHeader ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
+      }`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <Users className="w-8 h-8 text-indigo-600" />
+              Customer Management
+            </h1>
+            <p className="text-xs md:text-sm text-gray-600 mt-1">Search and view complete customer information</p>
+          </div>
         </div>
-      </header>
+      </div>
 
-      <div className="max-w-screen-xl mx-auto px-4 py-6 pb-24">
+      <div className="max-w-screen-xl mx-auto px-4 pb-24">
         {/* Search Section */}
         <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-6 border border-gray-100">
           <div className="flex items-center gap-2 mb-3">
@@ -465,7 +482,7 @@ export default function CustomersPage() {
             <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
               <button
                 onClick={() => toggleSection('history')}
-                className="w-full px-4 md:px-6 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-all"
+                className="w-full px-4 md:px-6 py-4 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-emerald-50 hover:from-indigo-100 hover:to-emerald-100 transition-all"
               >
                 <div className="flex items-center gap-3">
                   <History size={22} className="text-blue-600" />

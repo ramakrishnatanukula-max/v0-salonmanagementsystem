@@ -92,6 +92,19 @@ export async function GET(req: Request) {
       [from, to],
     )
 
+    // Billing status counts
+    const billingStatusRows = await query<any>(
+      `SELECT 
+         COUNT(DISTINCT CASE WHEN ab.id IS NOT NULL THEN a.id END) as billed_count,
+         COUNT(DISTINCT CASE WHEN ab.id IS NULL AND a.status = 'completed' THEN a.id END) as unbilled_count,
+         COUNT(DISTINCT CASE WHEN a.status = 'in_service' THEN a.id END) as in_service_count,
+         COUNT(DISTINCT CASE WHEN a.status = 'canceled' THEN a.id END) as canceled_count
+       FROM appointments a
+       LEFT JOIN appointment_billing ab ON ab.appointment_id = a.id
+       WHERE DATE(a.scheduled_start) BETWEEN ? AND ?`,
+      [from, to],
+    )
+
     // Staff analytics - services performed count and revenue from both sources
     const staffStats = await query<any>(
       `SELECT 
@@ -154,11 +167,19 @@ export async function GET(req: Request) {
       count: Number(r.count || 0),
     }))
 
+    const billingStats = {
+      billed: Number(billingStatusRows?.[0]?.billed_count || 0),
+      unbilled: Number(billingStatusRows?.[0]?.unbilled_count || 0),
+      in_service: Number(billingStatusRows?.[0]?.in_service_count || 0),
+      canceled: Number(billingStatusRows?.[0]?.canceled_count || 0),
+    }
+
     return NextResponse.json({
       range: { from, to },
       kpis,
       status,
       paymentStatus,
+      billingStats,
       topServices: topServices.map((t: any) => ({
         id: t.id,
         name: t.name || `Service ${t.id}`,

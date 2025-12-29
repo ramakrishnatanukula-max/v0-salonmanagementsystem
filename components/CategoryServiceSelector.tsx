@@ -20,6 +20,7 @@ interface Staff {
   name?: string
   first_name?: string
   last_name?: string
+  service_ids?: number[] // Array of service IDs this staff can perform
 }
 
 interface SelectedService {
@@ -54,7 +55,7 @@ export default function CategoryServiceSelector({
   const selectedCategoryName = categories.find((c) => c.id === selectedCategory)?.name || ""
 
   const addService = (service: Service) => {
-    // Check if service is already added
+    // Check if service is Added
     const isDuplicate = selectedServices.some(s => s.serviceId === service.id)
     if (isDuplicate) {
       return // Don't add duplicate services
@@ -86,9 +87,9 @@ export default function CategoryServiceSelector({
   return (
     <div className="space-y-5">
       {/* Categories */}
-      <div className="p-5 rounded-2xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-sm">
+      <div className="p-5 rounded-2xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-emerald-50 shadow-sm">
         <label className="block text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide flex items-center gap-2">
-          <div className="w-1.5 h-5 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+          <div className="w-1.5 h-5 bg-gradient-to-b from-indigo-600 to-emerald-600 rounded-full"></div>
           Select Category
         </label>
         <div className="flex flex-wrap gap-2.5">
@@ -99,7 +100,7 @@ export default function CategoryServiceSelector({
               onClick={() => setSelectedCategory(category.id)}
               className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all transform hover:scale-105 active:scale-95 ${
                 selectedCategory === category.id
-                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-200"
+                  ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white shadow-lg shadow-indigo-200"
                   : "bg-white text-gray-700 border-2 border-gray-200 hover:border-indigo-300 hover:shadow-md"
               }`}
             >
@@ -111,9 +112,9 @@ export default function CategoryServiceSelector({
 
       {/* Services for Selected Category */}
       {selectedCategory && (
-        <div className="p-5 rounded-2xl border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-sm space-y-3">
+        <div className="p-5 rounded-2xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50 to-emerald-50 shadow-sm space-y-3">
           <label className="block text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide flex items-center gap-2">
-            <div className="w-1.5 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full"></div>
+            <div className="w-1.5 h-5 bg-gradient-to-b from-indigo-600 to-emerald-600 rounded-full"></div>
             {selectedCategoryName} Services
           </label>
           
@@ -143,7 +144,7 @@ export default function CategoryServiceSelector({
                   {isAdded && (
                     <div className="flex items-center gap-1.5 mt-1">
                       <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-emerald-600 font-bold">Already Added</span>
+                      <span className="text-xs text-emerald-600 font-bold">Added</span>
                     </div>
                   )}
                 </button>
@@ -154,7 +155,7 @@ export default function CategoryServiceSelector({
                   className={`p-3 rounded-xl transition-all transform hover:scale-110 active:scale-95 ${
                     isAdded
                       ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                      : "bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-lg shadow-indigo-200"
+                      : "bg-gradient-to-br from-indigo-600 to-emerald-600 hover:from-indigo-700 hover:to-emerald-700 text-white shadow-lg shadow-indigo-200"
                   }`}
                 >
                   <Plus className="w-5 h-5" />
@@ -167,10 +168,10 @@ export default function CategoryServiceSelector({
 
       {/* Selected Services with Staff Assignment */}
       {selectedServices.length > 0 && (
-        <div className="p-5 rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-sm space-y-3">
+        <div className="p-5 rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-indigo-50 to-emerald-50 shadow-sm space-y-3">
           <div className="flex items-center justify-between mb-4">
             <label className="block text-sm font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
-              <div className="w-1.5 h-5 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full"></div>
+              <div className="w-1.5 h-5 bg-gradient-to-b from-indigo-600 to-emerald-600 rounded-full"></div>
               Selected Services
             </label>
             <span className="px-3 py-1 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-md">
@@ -208,12 +209,17 @@ export default function CategoryServiceSelector({
                     className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-300 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
                   >
                     <option value="">No staff assigned</option>
-                    {staff.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name || `${s.first_name || ""} ${s.last_name || ""}`.trim()}
-                      </option>
-                    ))}
+                    {staff
+                      .filter((s) => !s.service_ids || s.service_ids.length === 0 || s.service_ids.includes(selected.serviceId))
+                      .map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name || `${s.first_name || ""} ${s.last_name || ""}`.trim()}
+                        </option>
+                      ))}
                   </select>
+                  {staff.filter((s) => !s.service_ids || s.service_ids.length === 0 || s.service_ids.includes(selected.serviceId)).length === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">⚠️ No staff available for this service</p>
+                  )}
                 </div>
               </div>
             ))}

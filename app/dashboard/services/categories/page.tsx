@@ -33,7 +33,7 @@ function Toast({
       icon: <AlertCircle size={20} className="flex-shrink-0" />,
     },
     info: {
-      bg: "bg-gradient-to-r from-blue-500 to-cyan-500",
+      bg: "bg-gradient-to-r from-indigo-600 to-emerald-600",
       border: "border-l-4 border-blue-600",
       icon: <Info size={20} className="flex-shrink-0" />,
     },

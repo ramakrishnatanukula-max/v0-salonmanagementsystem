@@ -103,33 +103,25 @@ export default function Page() {
   }
 
   return (
-    <main className="min-h-dvh bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
-      {/* Background Decorative Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-gradient-to-br from-indigo-300/30 to-purple-300/30 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-gradient-to-tr from-pink-300/30 to-purple-300/30 rounded-full blur-3xl"></div>
-      </div>
-
+    <main className="min-h-dvh bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 md:p-6">
       {/* Header */}
-      <header className="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white px-4 py-8 shadow-2xl">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                  <Lock size={28} className="text-white" />
-                </div>
-                Staff Registration
-              </h1>
-              <p className="text-base md:text-lg text-white/90 mt-2">Add new team members to your salon</p>
-            </div>
+      <div className={`mb-6 sticky top-4 z-10 bg-white/80 backdrop-blur-md rounded-xl p-4 shadow-sm max-w-4xl mx-auto transition-all duration-300 transform ${
+        showHeader ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
+      }`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <Lock className="w-8 h-8 text-indigo-600" />
+              Staff Registration
+            </h1>
+            <p className="text-xs md:text-sm text-gray-600 mt-1">Add new team members to your salon</p>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Form Container */}
-      <div className="relative flex items-start justify-center px-4 pt-8 pb-32">
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8 md:p-10 w-full max-w-3xl">
+      <div className="flex items-start justify-center px-4 pb-32 max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 md:p-10 w-full">
           <SignupForm categories={categories} />
         </div>
       </div>

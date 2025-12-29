@@ -37,10 +37,10 @@ export default function Toast({ message, type = "info", onClose, duration = 3000
     >
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 mt-0.5">{icons[type]}</div>
-        <p className="flex-1 text-sm font-medium">{message}</p>
+        <p className="flex-1 text-sm font-medium leading-relaxed break-words">{message}</p>
         <button
           onClick={onClose}
-          className="flex-shrink-0 hover:opacity-70 transition-opacity"
+          className="flex-shrink-0 hover:opacity-70 transition-opacity ml-2"
           aria-label="Close"
         >
           <X className="w-4 h-4" />

@@ -33,9 +33,9 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="hidden md:flex md:flex-col md:w-64 bg-gradient-to-b from-indigo-50 to-green-50 border-r border-indigo-200 h-screen sticky top-0">
+    <aside className="hidden md:flex md:flex-col md:w-64 bg-gradient-to-b from-indigo-50 to-emerald-50 border-r border-indigo-200 h-screen sticky top-0">
       <div className="p-6 border-b border-indigo-200">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-green-600 bg-clip-text text-transparent">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent">
           Salon Manager
         </h1>
         {data?.name && (
@@ -52,7 +52,7 @@ export default function Sidebar() {
               href={href}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                 isActive
-                  ? "bg-gradient-to-r from-indigo-500 to-green-500 text-white shadow-md"
+                  ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white shadow-md"
                   : "text-gray-700 hover:bg-white/50"
               }`}
             >

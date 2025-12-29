@@ -29,10 +29,10 @@ export default function ConfirmDialog({
   return (
     <>
       {/* Overlay */}
-      <div className="fixed inset-0 bg-black/50 z-[150]" onClick={onCancel} />
+      <div className="fixed inset-0 bg-black/50 z-[400]" onClick={onCancel} />
 
       {/* Dialog */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[160] w-full max-w-sm mx-4">
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[410] w-full max-w-sm mx-4">
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
