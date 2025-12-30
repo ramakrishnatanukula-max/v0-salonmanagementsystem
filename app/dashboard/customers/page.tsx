@@ -3,15 +3,17 @@
 import type React from "react"
 import useSWR from "swr"
 import { useState, useEffect } from "react"
-import { Search, User, Phone, Mail, Users, History, TrendingUp, Calendar, X, ChevronDown, ChevronUp, Scissors, DollarSign, Clock, IndianRupee, FileText, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, User, Phone, Mail, Users, History, TrendingUp, Calendar, X, ChevronDown, ChevronUp, Scissors, DollarSign, Clock, IndianRupee, FileText, ChevronLeft, ChevronRight, Download, Share2 } from "lucide-react"
 import Toast from "@/components/Toast"
 import LoadingSpinner from "@/components/LoadingSpinner"
 import { formatDateDisplayIST, formatTimeDisplayIST } from "@/lib/timezone"
+import { downloadInvoicePDF, shareInvoicePDFViaWhatsApp, type InvoiceData } from "@/lib/pdf-generator"
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
 export default function CustomersPage() {
   const { data: customers, mutate, isLoading } = useSWR("/api/customers", fetcher)
+  const { data: userInfo } = useSWR("/api/auth/me", fetcher)
   const [searchPhone, setSearchPhone] = useState("")
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null)
@@ -55,9 +57,9 @@ export default function CustomersPage() {
     { revalidateOnMount: true, dedupingInterval: 0 }
   )
 
-  // Fetch appointments history
+  // Fetch appointments history (filtered by staff_id for staff role)
   const { data: appointments, mutate: mutateAppointments, isLoading: appointmentsLoading } = useSWR(
-    selectedCustomer ? `/api/appointments?customer_id=${selectedCustomer.id}` : null,
+    selectedCustomer ? `/api/appointments?customer_id=${selectedCustomer.id}${userInfo?.role === 'staff' && userInfo?.user_id ? `&staff_id=${userInfo.user_id}` : ''}` : null,
     fetcher,
     { revalidateOnMount: true, dedupingInterval: 0 }
   )
@@ -710,7 +712,7 @@ export default function CustomersPage() {
 
               {/* Invoice / Billing Information */}
               {selectedAppointment.billing && (
-                <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden shadow-lg">
+                <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden shadow-lg" id="invoice-content">
                   {/* Invoice Header */}
                   <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4">
                     <div className="flex items-center justify-between">
@@ -731,7 +733,7 @@ export default function CustomersPage() {
                   </div>
 
                   {/* Invoice Body */}
-                  <div className="p-6 space-y-4">
+                  <div className="p-6 space-y-4" id="invoice-details">
                     {/* Customer Info */}
                     <div className="flex justify-between items-start pb-4 border-b-2 border-gray-200">
                       <div>
@@ -787,32 +789,84 @@ export default function CustomersPage() {
                       </div>
                     )}
 
-                    {/* Billing Calculations */}
-                    <div className="space-y-2 pt-4">
-                      {selectedAppointment.billing.subtotal && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Subtotal:</span>
-                          <span className="font-semibold text-gray-800">₹{Number(selectedAppointment.billing.subtotal).toFixed(2)}</span>
-                        </div>
-                      )}
-                      {selectedAppointment.billing.discount_amount && Number(selectedAppointment.billing.discount_amount) > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Discount:</span>
-                          <span className="font-semibold text-emerald-600">-₹{Number(selectedAppointment.billing.discount_amount).toFixed(2)}</span>
-                        </div>
-                      )}
-                      {selectedAppointment.billing.tax_amount && Number(selectedAppointment.billing.tax_amount) > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Tax (GST):</span>
-                          <span className="font-semibold text-gray-800">₹{Number(selectedAppointment.billing.tax_amount).toFixed(2)}</span>
-                        </div>
-                      )}
+                    {/* Billing Calculations with Detailed GST Breakdown */}
+                    <div className="space-y-3 pt-4">
+                      {/* Calculate GST breakdown from actual services */}
+                      {(() => {
+                        let totalBase = 0
+                        let totalGST = 0
+                        const gstBreakdown: { [key: string]: number } = {}
+                        
+                        actualServices.forEach((service: any) => {
+                          const totalPrice = Number(service.price || 0)
+                          const gstPercent = Number(service.gst_percentage || 0)
+                          
+                          if (gstPercent > 0) {
+                            const baseAmount = totalPrice / (1 + gstPercent / 100)
+                            const gstAmount = totalPrice - baseAmount
+                            totalBase += baseAmount
+                            totalGST += gstAmount
+                            
+                            // Group by GST percentage
+                            const key = `${gstPercent}%`
+                            gstBreakdown[key] = (gstBreakdown[key] || 0) + gstAmount
+                          } else {
+                            totalBase += totalPrice
+                          }
+                        })
+                        
+                        const finalTotal = Number(selectedAppointment.billing.total_amount || selectedAppointment.billing.final_amount || 0)
+                        const discount = Number(selectedAppointment.billing.discount_amount || 0)
+                        
+                        return (
+                          <>
+                            {/* Base Amount */}
+                            {totalBase > 0 && (
+                              <div className="flex justify-between text-sm bg-blue-50 px-3 py-2 rounded">
+                                <span className="text-gray-700 font-medium">Base Amount (excl. GST):</span>
+                                <span className="font-semibold text-gray-900">₹{totalBase.toFixed(2)}</span>
+                              </div>
+                            )}
+                            
+                            {/* GST Breakdown by percentage */}
+                            {Object.keys(gstBreakdown).length > 0 && (
+                              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+                                <div className="text-xs font-bold text-amber-900 uppercase tracking-wide">GST Breakdown</div>
+                                {Object.entries(gstBreakdown).map(([rate, amount]) => (
+                                  <div key={rate} className="flex justify-between text-sm">
+                                    <span className="text-amber-700">GST @ {rate}:</span>
+                                    <span className="font-semibold text-amber-900">₹{amount.toFixed(2)}</span>
+                                  </div>
+                                ))}
+                                <div className="flex justify-between text-sm border-t border-amber-300 pt-2">
+                                  <span className="text-amber-800 font-bold">Total GST:</span>
+                                  <span className="font-bold text-amber-900">₹{totalGST.toFixed(2)}</span>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Subtotal */}
+                            <div className="flex justify-between text-sm bg-gray-100 px-3 py-2 rounded">
+                              <span className="text-gray-700 font-medium">Subtotal (incl. GST):</span>
+                              <span className="font-semibold text-gray-900">₹{(totalBase + totalGST).toFixed(2)}</span>
+                            </div>
+                            
+                            {/* Discount */}
+                            {discount > 0 && (
+                              <div className="flex justify-between text-sm bg-green-50 px-3 py-2 rounded">
+                                <span className="text-green-700 font-medium">Discount:</span>
+                                <span className="font-semibold text-green-700">-₹{discount.toFixed(2)}</span>
+                              </div>
+                            )}
+                          </>
+                        )
+                      })()}
                       
-                      {/* Total Amount */}
-                      <div className="border-t-2 border-gray-300 pt-3 mt-3">
+                      {/* Final Total Amount */}
+                      <div className="border-t-2 border-gray-400 pt-3 mt-3 bg-gradient-to-r from-emerald-50 to-green-50 px-4 py-3 rounded-lg">
                         <div className="flex justify-between items-center">
-                          <span className="text-xl font-bold text-gray-800">Total Amount:</span>
-                          <span className="text-3xl font-bold text-emerald-600">₹{Number(selectedAppointment.billing.total_amount || selectedAppointment.billing.final_amount || 0).toFixed(2)}</span>
+                          <span className="text-xl font-bold text-gray-900">Final Amount:</span>
+                          <span className="text-3xl font-bold text-emerald-700">₹{Number(selectedAppointment.billing.total_amount || selectedAppointment.billing.final_amount || 0).toFixed(2)}</span>
                         </div>
                       </div>
 
@@ -862,6 +916,126 @@ export default function CustomersPage() {
                         Last updated: {formatDateDisplayIST(selectedAppointment.billing.updated_at)}
                       </p>
                     )}
+                  </div>
+                  
+                  {/* Action Buttons - Download & WhatsApp Share */}
+                  <div className="px-6 py-4 bg-white border-t border-gray-200 flex gap-3">
+                    <button
+                      onClick={() => {
+                        // Prepare invoice data
+                        const invoiceData: InvoiceData = {
+                          billId: selectedAppointment.billing.id || selectedAppointment.id,
+                          customerName: selectedAppointment.customer_name || `${selectedCustomer?.first_name} ${selectedCustomer?.last_name}`,
+                          customerPhone: selectedCustomer?.phone || selectedAppointment.phone || '',
+                          customerEmail: selectedCustomer?.email || selectedAppointment.email,
+                          appointmentDate: formatDateDisplayIST(selectedAppointment.scheduled_start),
+                          appointmentTime: formatTimeDisplayIST(selectedAppointment.scheduled_start),
+                          familyMemberName: selectedAppointment.family_member?.name,
+                          services: actualServices.map((service: any) => {
+                            const totalPrice = Number(service.price || 0)
+                            const gstPercent = Number(service.gst_percentage || 0)
+                            const baseAmount = gstPercent > 0 ? totalPrice / (1 + gstPercent / 100) : totalPrice
+                            const gstAmount = totalPrice - baseAmount
+                            const staff = appointmentStaff.find((s: any) => s.id === service.doneby_staff_id)
+                            
+                            return {
+                              name: service.service_name,
+                              staffName: staff?.name,
+                              baseAmount,
+                              gstPercent,
+                              gstAmount,
+                              total: totalPrice
+                            }
+                          }),
+                          baseTotal: actualServices.reduce((sum: number, s: any) => {
+                            const totalPrice = Number(s.price || 0)
+                            const gstPercent = Number(s.gst_percentage || 0)
+                            return sum + (gstPercent > 0 ? totalPrice / (1 + gstPercent / 100) : totalPrice)
+                          }, 0),
+                          gstTotal: actualServices.reduce((sum: number, s: any) => {
+                            const totalPrice = Number(s.price || 0)
+                            const gstPercent = Number(s.gst_percentage || 0)
+                            const baseAmount = gstPercent > 0 ? totalPrice / (1 + gstPercent / 100) : totalPrice
+                            return sum + (totalPrice - baseAmount)
+                          }, 0),
+                          subtotal: actualServices.reduce((sum: number, s: any) => sum + Number(s.price || 0), 0),
+                          discount: Number(selectedAppointment.billing?.discount_amount || 0),
+                          finalAmount: Number(selectedAppointment.billing?.total_amount || selectedAppointment.billing?.final_amount || 0),
+                          paymentMethod: selectedAppointment.billing?.payment_method || 'Cash',
+                          paymentStatus: selectedAppointment.billing?.payment_status || 'paid',
+                          paidAmount: Number(selectedAppointment.billing?.paid_amount || selectedAppointment.billing?.final_amount || 0)
+                        }
+                        
+                        // Download PDF
+                        downloadInvoicePDF(invoiceData)
+                      }}
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <Download size={20} />
+                      Download Invoice
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const phone = selectedCustomer?.phone || selectedAppointment.phone || ''
+                        
+                        if (!phone) {
+                          setToast({ type: "error", message: "Customer phone number not available" })
+                          return
+                        }
+                        
+                        // Prepare invoice data
+                        const invoiceData: InvoiceData = {
+                          billId: selectedAppointment.billing.id || selectedAppointment.id,
+                          customerName: selectedAppointment.customer_name || `${selectedCustomer?.first_name} ${selectedCustomer?.last_name}`,
+                          customerPhone: selectedCustomer?.phone || selectedAppointment.phone || '',
+                          customerEmail: selectedCustomer?.email || selectedAppointment.email,
+                          appointmentDate: formatDateDisplayIST(selectedAppointment.scheduled_start),
+                          appointmentTime: formatTimeDisplayIST(selectedAppointment.scheduled_start),
+                          familyMemberName: selectedAppointment.family_member?.name,
+                          services: actualServices.map((service: any) => {
+                            const totalPrice = Number(service.price || 0)
+                            const gstPercent = Number(service.gst_percentage || 0)
+                            const baseAmount = gstPercent > 0 ? totalPrice / (1 + gstPercent / 100) : totalPrice
+                            const gstAmount = totalPrice - baseAmount
+                            const staff = appointmentStaff.find((s: any) => s.id === service.doneby_staff_id)
+                            
+                            return {
+                              name: service.service_name,
+                              staffName: staff?.name,
+                              baseAmount,
+                              gstPercent,
+                              gstAmount,
+                              total: totalPrice
+                            }
+                          }),
+                          baseTotal: actualServices.reduce((sum: number, s: any) => {
+                            const totalPrice = Number(s.price || 0)
+                            const gstPercent = Number(s.gst_percentage || 0)
+                            return sum + (gstPercent > 0 ? totalPrice / (1 + gstPercent / 100) : totalPrice)
+                          }, 0),
+                          gstTotal: actualServices.reduce((sum: number, s: any) => {
+                            const totalPrice = Number(s.price || 0)
+                            const gstPercent = Number(s.gst_percentage || 0)
+                            const baseAmount = gstPercent > 0 ? totalPrice / (1 + gstPercent / 100) : totalPrice
+                            return sum + (totalPrice - baseAmount)
+                          }, 0),
+                          subtotal: actualServices.reduce((sum: number, s: any) => sum + Number(s.price || 0), 0),
+                          discount: Number(selectedAppointment.billing?.discount_amount || 0),
+                          finalAmount: Number(selectedAppointment.billing?.total_amount || selectedAppointment.billing?.final_amount || 0),
+                          paymentMethod: selectedAppointment.billing?.payment_method || 'Cash',
+                          paymentStatus: selectedAppointment.billing?.payment_status || 'paid',
+                          paidAmount: Number(selectedAppointment.billing?.paid_amount || selectedAppointment.billing?.final_amount || 0)
+                        }
+                        
+                        // Share PDF via WhatsApp
+                        shareInvoicePDFViaWhatsApp(invoiceData, phone)
+                        setToast({ type: "success", message: "PDF downloaded! Opening WhatsApp..." })
+                      }}
+                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <Share2 size={20} />
+                      Share PDF on WhatsApp
+                    </button>
                   </div>
                 </div>
               )}
