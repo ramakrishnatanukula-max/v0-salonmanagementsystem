@@ -6,8 +6,7 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start",
-    "postinstall": "node -e \"const { platform, arch } = process; if (platform === 'linux' && arch === 'x64') { try { require('child_process').execSync('npm install lightningcss-linux-x64-gnu@^1.28.3 --no-save', { stdio: 'inherit' }); } catch (e) { console.error(e); process.exit(1); } } else { console.log('Skipping lightningcss-linux-x64-gnu install on', platform, arch); }\" && npm rebuild lightningcss --build-from-source || true"
+    "start": "next start"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -49,10 +48,6 @@
     "embla-carousel-react": "latest",
     "geist": "latest",
     "input-otp": "latest",
-    "jspdf": "^3.0.4",
-    "jspdf-autotable": "^5.0.2",
-    "lightningcss": "^1.28.3",
-    "lucide-react": "^0.454.0",
     "mysql2": "latest",
     "next": "^15.5.6",
     "next-themes": "latest",
@@ -81,8 +76,5 @@
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
     "typescript": "^5"
-  },
-  "optionalDependencies": {
-    "lightningcss-linux-x64-gnu": "^1.28.3"
   }
 }
