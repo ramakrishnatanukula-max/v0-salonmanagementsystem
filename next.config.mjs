@@ -13,9 +13,6 @@ const nextConfig = {
     maxInactiveAge: 60 * 1000,
     pagesBufferLength: 5,
   },
-  devIndicators: {
-    buildActivity: false,
-  },
 }
 
 export default nextConfig
