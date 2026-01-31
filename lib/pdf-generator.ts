@@ -93,3 +93,34 @@ export async function shareInvoicePDFViaWhatsApp(data: InvoiceData, phoneNumber:
     throw error
   }
 }
+
+// Share invoice link via WhatsApp Web (opens in browser) - no PDF generated
+export function shareInvoiceLinkViaWhatsApp(data: InvoiceData, phoneNumber: string, baseUrl?: string): void {
+  try {
+    const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : (baseUrl || '')
+
+    // Build URL-safe token from billing id (fall back to billId or appointment id)
+    const id = data.billId
+    const payload = { id }
+    const raw = typeof window !== 'undefined' ? window.btoa(JSON.stringify(payload)) : Buffer.from(JSON.stringify(payload)).toString('base64')
+    const token = raw.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
+    const invoiceUrl = origin ? `${origin}/invoice/${token}` : `/invoice/${token}`
+
+    const message = `Thank you for visiting UniSalon! Here is your invoice: ${invoiceUrl}\nYou can download it from the link.`
+
+    const cleanPhone = phoneNumber.replace(/[^0-9]/g, '')
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
+
+    // Open WhatsApp Web with the message
+    if (typeof window !== 'undefined') {
+      window.open(whatsappUrl, '_blank')
+    } else {
+      // No-op on server
+      console.log('WhatsApp share URL:', whatsappUrl)
+    }
+  } catch (error) {
+    console.error('Error sharing invoice link on WhatsApp:', error)
+    throw error
+  }
+}

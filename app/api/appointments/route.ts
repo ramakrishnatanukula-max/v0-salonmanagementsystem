@@ -8,6 +8,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const date = searchParams.get("date") // YYYY-MM-DD
   const customer_id = searchParams.get("customer_id") // Filter by customer
+  const billing_id = searchParams.get("billing_id") // Filter by billing id
   
   // Build WHERE clause
   let whereConditions = []
@@ -21,6 +22,11 @@ export async function GET(req: Request) {
   if (customer_id) {
     whereConditions.push("a.customer_id=?")
     params.push(customer_id)
+  }
+
+  if (billing_id) {
+    whereConditions.push("ab.id=?")
+    params.push(billing_id)
   }
   
   // For staff role, filter by assigned staff in actual services

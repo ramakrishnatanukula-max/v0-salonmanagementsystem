@@ -6,6 +6,7 @@ import Toast from "@/components/Toast"
 import ConfirmDialog from "@/components/ConfirmDialog"
 import LoadingSpinner from "@/components/LoadingSpinner"
 import { formatDateDisplayIST, formatTimeDisplayIST, formatDateTimeIST } from "@/lib/timezone"
+import { shareInvoiceLinkViaWhatsApp } from "@/lib/pdf-generator"
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
@@ -246,6 +247,51 @@ function AppointmentServicesPanel({
     }
   })
 
+  async function sendEmailInline() {
+    const email = appointment.customer_email || appointment.customer_email_address
+    if (!email) {
+      onNotify("Customer email not available - cannot send", "error")
+      return
+    }
+
+    try {
+      onNotify("Sending invoice email...", "info")
+      const res = await fetch("/api/send-invoice-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: email,
+          billId: appointment.billing?.id || appointment.billing_id,
+          customer_name: appointment.customer_name,
+          appointment_date: formatDateTimeIST(appointment.scheduled_start),
+          services: itemsWithTax.map((s: any) => ({
+            name: s.service_name || s.name || '',
+            baseAmount: Number(s.baseAmount || s.price || 0),
+            gstPercent: Number(s.gstPercentage || s.gst || 0),
+            gstAmount: Number(s.gstAmount || s.totalTax || 0),
+            total: Number(s.lineTotal || s.total || 0),
+          })),
+          subtotal: itemsWithTax.reduce((sum: number, s: any) => sum + (s.lineTotal || 0), 0),
+          total: appointment.billing?.total_amount || appointment.total_amount || 0,
+          discount: appointment.billing?.discount || 0,
+          final_amount: appointment.billing?.paid_amount || appointment.billing?.final_amount || appointment.final_amount || appointment.total_amount || 0,
+          payment_method: appointment.billing?.payment_method || appointment.payment_method,
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        onNotify("📧 Invoice email sent to customer", "success")
+      } else {
+        console.error('Email API error', data)
+        onNotify("Failed to send email: " + (data.error || "Unknown error"), "error")
+      }
+    } catch (err) {
+      console.error("Error sending invoice email:", err)
+      onNotify("Error sending email", "error")
+    }
+  }
+
   return (
     <div className="px-4 pb-4 border-t border-gray-200">
       <div className="mt-4 rounded-lg border border-gray-300 bg-white overflow-hidden">
@@ -295,6 +341,69 @@ function AppointmentServicesPanel({
             <div>Amount: <span className="font-bold">₹{Number(appointment.billing?.final_amount || appointment.billing?.total_amount || appointment.final_amount || appointment.total_amount || 0).toFixed(2)}</span></div>
             {(appointment.billing?.payment_method || appointment.payment_method) && <div>Method: <span className="font-semibold capitalize">{appointment.billing?.payment_method || appointment.payment_method}</span></div>}
             {(appointment.billing?.updated_at || appointment.updated_at) && <div>Date: <span className="text-xs text-gray-600">{formatDateDisplayIST(appointment.billing?.updated_at || appointment.updated_at)}</span></div>}
+          </div>
+
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              className="px-3 py-1 rounded-md bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
+              onClick={() => {
+                try {
+                  const billId = appointment.billing?.id || appointment.billing_id
+                  if (!billId) {
+                    onNotify('Billing id not available to share', 'error')
+                    return
+                  }
+
+                  const customerPhone = appointment.customer_phone || appointment.customer_mobile || appointment.customer_contact || appointment.phone || ''
+
+                  const invoiceData: any = {
+                    billId: billId,
+                    customerName: appointment.customer_name || '',
+                    customerPhone: customerPhone,
+                    customerEmail: appointment.customer_email || appointment.customer_email_address || '',
+                    appointmentDate: formatDateDisplayIST(appointment.scheduled_start),
+                    appointmentTime: formatTimeDisplayIST(appointment.scheduled_start),
+                    services: (Array.isArray(itemsWithTax) ? itemsWithTax : []).map((s: any) => ({
+                      name: s.service_name || s.name || '',
+                      staffName: s.staff_name || s.staffName || undefined,
+                      baseAmount: Number(s.baseAmount || s.price || 0),
+                      gstPercent: Number(s.gstPercentage || s.gst || 0),
+                      gstAmount: Number(s.gstAmount || s.totalTax || 0),
+                      total: Number(s.lineTotal || s.total || 0),
+                    })),
+                    baseTotal: 0,
+                    gstTotal: 0,
+                    subtotal: appointment.billing?.total_amount || appointment.total_amount || 0,
+                    discount: appointment.billing?.discount || 0,
+                    finalAmount: appointment.billing?.paid_amount || appointment.billing?.final_amount || appointment.final_amount || appointment.total_amount || 0,
+                    paymentMethod: appointment.billing?.payment_method || appointment.payment_method || '',
+                    paymentStatus: appointment.billing?.payment_status || appointment.payment_status || '',
+                  }
+
+                  shareInvoiceLinkViaWhatsApp(invoiceData, customerPhone || '')
+                } catch (err) {
+                  console.error('Error sharing invoice link:', err)
+                  onNotify('Failed to open WhatsApp share', 'error')
+                }
+              }}
+            >
+              📤 Share via WhatsApp
+            </button>
+            <button
+              type="button"
+              className="px-3 py-1 rounded-md bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+              onClick={() => {
+                try {
+                  sendEmailInline()
+                } catch (err) {
+                  console.error('Error triggering email send:', err)
+                  onNotify('Failed to send invoice email', 'error')
+                }
+              }}
+            >
+              ✉️ Send Email
+            </button>
           </div>
         </div>
       )}
@@ -424,6 +533,7 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           to: appointment.customer_email,
+          billId: appointment.billing?.id || appointment.billing_id,
           customer_name: appointment.customer_name,
           appointment_date: formatDateTimeIST(appointment.scheduled_start),
           services: servicesBreakdown,

@@ -3,11 +3,12 @@
 import type React from "react"
 import useSWR from "swr"
 import { useState, useEffect } from "react"
+import { useRouter } from 'next/navigation'
 import { Search, User, Phone, Mail, Users, History, TrendingUp, Calendar, X, ChevronDown, ChevronUp, Scissors, DollarSign, Clock, IndianRupee, FileText, ChevronLeft, ChevronRight, Download, Share2 } from "lucide-react"
 import Toast from "@/components/Toast"
 import LoadingSpinner from "@/components/LoadingSpinner"
 import { formatDateDisplayIST, formatTimeDisplayIST } from "@/lib/timezone"
-import { downloadInvoicePDF, shareInvoicePDFViaWhatsApp, type InvoiceData } from "@/lib/pdf-generator"
+import { downloadInvoicePDF, shareInvoiceLinkViaWhatsApp, type InvoiceData } from "@/lib/pdf-generator"
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
@@ -107,30 +108,20 @@ export default function CustomersPage() {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
-  // Fetch actual services and staff when appointment is selected
-  const handleAppointmentClick = async (appt: any) => {
-    setSelectedAppointment(appt)
-    setActualServices([])
-    setAppointmentStaff([])
-    setIsLoadingAppointment(true)
-    
+  const router = useRouter()
+
+  // Navigate to dedicated bill detail page instead of opening modal
+  const handleAppointmentClick = (appt: any) => {
     try {
-      // Fetch actual services taken
-      const servicesRes = await fetch(`/api/appointments/${appt.id}/actual-services`)
-      const servicesData = await servicesRes.json()
-      setActualServices(servicesData || [])
-      
-      // Fetch staff details for services with doneby_staff_id
-      const staffIds = [...new Set(servicesData.filter((s: any) => s.doneby_staff_id).map((s: any) => s.doneby_staff_id))]
-      if (staffIds.length > 0) {
-        const staffPromises = staffIds.map(id => fetch(`/api/staff/${id}`).then(r => r.json()))
-        const staffData = await Promise.all(staffPromises)
-        setAppointmentStaff(staffData.filter(s => s && !s.error))
-      }
-    } catch (error) {
-      console.error('Failed to fetch appointment details:', error)
-    } finally {
-      setIsLoadingAppointment(false)
+      // Build a URL-safe base64 token from appointment id (or billing id when available)
+      const payload = { id: appt.billing?.id || appt.id }
+      const b64 = typeof window !== 'undefined' ? window.btoa(JSON.stringify(payload)) : Buffer.from(JSON.stringify(payload)).toString('base64')
+      // URL-safe: + -> -, / -> _, remove trailing =
+      const urlSafe = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+      router.push(`/dashboard/customers/${urlSafe}`)
+    } catch (err) {
+      console.error('Failed to navigate to bill detail', err)
+      setToast({ type: 'error', message: 'Failed to open invoice detail' })
     }
   }
 
@@ -714,20 +705,25 @@ export default function CustomersPage() {
               {selectedAppointment.billing && (
                 <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden shadow-lg" id="invoice-content">
                   {/* Invoice Header */}
-                  <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4">
+                  <div className="bg-white px-6 py-4 border-b">
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="flex items-center gap-4">
+                        <img src="/logo.png" alt="UNISALON" width={96} height={48} onError={(e:any)=>{e.currentTarget.onerror=null; e.currentTarget.src='/logo.svg'}} className="h-12 w-auto" />
+                        <div>
+                          <div className="text-lg font-bold">UNISALON <span className="text-sm font-normal block">By Shashi</span></div>
+                          <div className="text-sm text-gray-600">110, Road No. 16, Alkapur Twp, Manikonda, Hyderabad – 500 089</div>
+                          <div className="text-sm text-gray-600">📧 info@unisalon.in • 📞 +91 76708 26262</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
                         <h3 className="text-2xl font-bold flex items-center gap-2">
                           <FileText size={24} />
                           INVOICE
                         </h3>
                         {selectedAppointment.billing.id && (
-                          <p className="text-sm text-emerald-100 mt-1">Bill #{selectedAppointment.billing.id}</p>
+                          <p className="text-sm text-emerald-600 mt-1">Bill #{selectedAppointment.billing.id}</p>
                         )}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-emerald-100">Date</p>
-                        <p className="font-semibold">{formatDateDisplayIST(selectedAppointment.scheduled_start)}</p>
+                        <div className="text-sm mt-1">{formatDateDisplayIST(selectedAppointment.scheduled_start)}</div>
                       </div>
                     </div>
                   </div>
@@ -1027,9 +1023,9 @@ export default function CustomersPage() {
                           paidAmount: Number(selectedAppointment.billing?.paid_amount || selectedAppointment.billing?.final_amount || 0)
                         }
                         
-                        // Share PDF via WhatsApp
-                        shareInvoicePDFViaWhatsApp(invoiceData, phone)
-                        setToast({ type: "success", message: "PDF downloaded! Opening WhatsApp..." })
+                        // Share invoice link via WhatsApp
+                        shareInvoiceLinkViaWhatsApp(invoiceData, phone)
+                        setToast({ type: "success", message: "Opening WhatsApp with invoice link..." })
                       }}
                       className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                     >

@@ -197,29 +197,221 @@ export async function POST(req: Request) {
 </head>
 <body>
   <div class="invoice-container">
-    <div class="header">
-      <h1>INVOICE</h1>
-      <div class="bill-id">Bill #${data.billId}</div>
-      <div class="date-section">
-        <div class="date-label">Date</div>
-        <div class="date-value">${data.appointmentDate}</div>
+    <div
+  style="
+    width:100%;
+    padding:20px 24px;
+    background:#0b0b0b;
+    color:#ffffff;
+    border-bottom:3px solid #059669;
+    box-sizing:border-box;
+    font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;
+  "
+>
+  <div
+    style="
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:20px;
+    "
+  >
+    <!-- LEFT : LOGO + BUSINESS DETAILS -->
+    <div
+      style="
+        display:flex;
+        gap:14px;
+        align-items:flex-start;
+        flex:1;
+      "
+    >
+      <!-- LOGO -->
+      <div
+        style="
+          width:72px;
+          height:72px;
+          border-radius:10px;
+          background:rgba(255,255,255,0.08);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          overflow:hidden;
+          flex-shrink:0;
+        "
+      >
+        <img
+          src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxKCpWlrl5Q6h27fXSHKJzR4JbuhWHONz4Ow&s"
+          alt="Unisalon Logo"
+          style="width:60px; height:auto; object-fit:contain;"
+        />
+      </div>
+
+      <!-- BUSINESS INFO -->
+      <div>
+        <div style="font-size:22px; font-weight:700;">
+          UNISALON
+        </div>
+
+        <div style="font-size:12px; font-weight:600; opacity:0.9; margin-top:2px;">
+          By Shashi
+        </div>
+
+        <div
+          style="
+            font-size:12px;
+            margin-top:6px;
+            line-height:1.45;
+            color:rgba(255,255,255,0.92);
+            max-width:460px;
+          "
+        >
+          110, Road No. 16, Alkapur Twp, Manikonda,<br />
+          Hyderabad – 500 089
+        </div>
+
+        <div style="font-size:12px; margin-top:6px; color:rgba(255,255,255,0.9);">
+          📧 info@unisalon.in &nbsp; | &nbsp; 📞 +91 76708 26262
+        </div>
       </div>
     </div>
-    
-    <div class="info-section">
-      <div class="info-col">
-        <div class="info-label">Bill To:</div>
-        <div class="info-name">${data.customerName}</div>
-        <div class="info-value">${data.customerPhone}</div>
-        ${data.customerEmail ? `<div class="info-value">${data.customerEmail}</div>` : ''}
-        ${data.familyMemberName ? `<div class="family-member">Service for: ${data.familyMemberName}</div>` : ''}
+
+    <!-- RIGHT : INVOICE DETAILS -->
+    <div
+      style="
+        text-align:right;
+        min-width:200px;
+        flex-shrink:0;
+      "
+    >
+      <div style="font-size:20px; font-weight:700;">
+        Invoice #${data.billId}
       </div>
-      <div class="info-col">
-        <div class="info-label">Appointment:</div>
-        <div class="info-value">#${data.billId}</div>
-        <div class="info-value">${data.appointmentTime}</div>
+
+      <div style="font-size:12px; margin-top:6px; opacity:0.9;">
+        Date : ${data.appointmentDate}
+      </div>
+
+      <div style="font-size:12px; margin-top:4px; opacity:0.9;">
+        Time : ${data.appointmentTime}
+      </div>
+      
+      <div style="font-size:12px; margin-top:4px; opacity:0.9;">
+        GST No : JHERYY8734WRNBS33
       </div>
     </div>
+  </div>
+</div>
+<!-- BILL + APPOINTMENT SECTION -->
+<div
+  style="
+    width:100%;
+    display:flex;
+    justify-content:center;
+    margin-top:24px;
+  "
+>
+  <!-- MAIN CONTAINER -->
+  <div
+    style="
+          margin:20px 30px;
+
+      width:100%;
+      max-width:800px;
+      padding:0 16px;
+      display:flex;
+      justify-content:space-between;
+      gap:40px;
+      box-sizing:border-box;
+    "
+  >
+    <!-- LEFT COLUMN -->
+    <div style="flex:1; font-size:13px;">
+      <div
+        style="
+          font-size:12px;
+          font-weight:700;
+          text-transform:uppercase;
+          color:#059669;
+          margin-bottom:10px;
+        "
+      >
+        Bill To
+      </div>
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:90px 1fr;
+          row-gap:6px;
+        "
+      >
+        <span style="font-weight:600;">Name:</span>
+        <span style="font-weight:600;">${data.customerName}</span>
+
+        <span style="font-weight:600;">Phone:</span>
+        <span>${data.customerPhone}</span>
+
+        ${
+          data.customerEmail
+            ? `
+            <span style="font-weight:600;">Email:</span>
+            <span>${data.customerEmail}</span>
+            `
+            : ""
+        }
+      </div>
+
+      ${
+        data.familyMemberName
+          ? `
+          <div
+            style="
+              margin-top:8px;
+              font-size:12px;
+              font-style:italic;
+              color:#4b5563;
+            "
+          >
+            <strong>Service For:</strong> ${data.familyMemberName}
+          </div>
+          `
+          : ""
+      }
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div style="flex:1; font-size:13px;">
+      <div
+        style="
+          font-size:12px;
+          font-weight:700;
+          text-transform:uppercase;
+          color:#059669;
+          margin-bottom:10px;
+        "
+      >
+        Appointment Details
+      </div>
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:110px 1fr;
+          row-gap:6px;
+        "
+      >
+        <span style="font-weight:600;">Invoice No:</span>
+        <span>#${data.billId}</span>
+
+        <span style="font-weight:600;">Appointment:</span>
+        <span>${data.appointmentDate} ${data.appointmentTime}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
     
     <table class="services-table">
       <thead>
@@ -319,7 +511,6 @@ export async function POST(req: Request) {
     
     <div class="footer">
       <div class="footer-title">Thank you for your business!</div>
-      <div class="footer-date">Last updated: ${data.appointmentDate}</div>
     </div>
   </div>
 </body>
