@@ -1,0 +1,25 @@
+# Development and build artifacts
+.git
+.gitignore
+node_modules
+npm-debug.log
+yarn-error.log
+.env.local
+.env.*.local
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test-*.mjs
+debug-*.js
+*.log
+
+# Database seeds
+seed-data.sql
+
+# Build outputs to ignore
+.next
+dist
+build

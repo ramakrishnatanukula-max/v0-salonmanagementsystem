@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm ci --legacy-peer-deps && npm run build",
+  "installCommand": "npm ci --legacy-peer-deps",
+  "env": {
+    "TAILWIND_OXIDE_DISABLE": "true"
+  }
+}
