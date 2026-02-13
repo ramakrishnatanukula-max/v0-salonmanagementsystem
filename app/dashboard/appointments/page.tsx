@@ -1,7 +1,7 @@
 "use client"
 import React, { useMemo, useState, useEffect } from "react"
 import useSWR from "swr"
-import { Pencil, Trash2, Plus, X, AlertCircle, CheckCircle2, AlertTriangle, Check, Loader, Info, Calendar, User, Clock, MessageSquare, CheckCircle, ClipboardList, Users, Search } from "lucide-react"
+import { Pencil, Trash2, Plus, X, AlertCircle, CheckCircle2, AlertTriangle, Check, Loader, Info, Calendar, User, Clock, MessageSquare, CheckCircle, ClipboardList, Users, Search, Sparkles } from "lucide-react"
 import Toast from "@/components/Toast"
 import ConfirmDialog from "@/components/ConfirmDialog"
 import LoadingSpinner from "@/components/LoadingSpinner"
@@ -48,14 +48,14 @@ export default function AppointmentsPage() {
 
   const serviceMap = useMemo(() => {
     const map = {}
-    ;(Array.isArray(services) ? services : []).forEach((s) => (map[s.id] = s.name))
+      ; (Array.isArray(services) ? services : []).forEach((s) => (map[s.id] = s.name))
     return map
   }, [services])
   const staffMap = useMemo(() => {
     const map = {}
-    ;(Array.isArray(staff) ? staff : []).forEach(
-      (st) => (map[st.id] = st.name || `${st.first_name || ""} ${st.last_name || ""}`.trim()),
-    )
+      ; (Array.isArray(staff) ? staff : []).forEach(
+        (st) => (map[st.id] = st.name || `${st.first_name || ""} ${st.last_name || ""}`.trim()),
+      )
     return map
   }, [staff])
 
@@ -142,11 +142,10 @@ export default function AppointmentsPage() {
           {days.map((d) => (
             <button
               key={d}
-              className={`flex flex-col items-center justify-center px-4 py-2 rounded-lg transition flex-shrink-0 min-w-[70px] ${
-                d === date
-                  ? "bg-gradient-to-r from-indigo-600 to-emerald-500 text-white font-semibold shadow-md"
-                  : "bg-white text-gray-700 border border-gray-200"
-              }`}
+              className={`flex flex-col items-center justify-center px-4 py-2 rounded-lg transition flex-shrink-0 min-w-[70px] ${d === date
+                ? "bg-gradient-to-r from-indigo-600 to-emerald-500 text-white font-semibold shadow-md"
+                : "bg-white text-gray-700 border border-gray-200"
+                }`}
               onClick={() => setDate(d)}
               style={{ fontSize: 13, minWidth: "70px" }}
             >
@@ -172,107 +171,105 @@ export default function AppointmentsPage() {
           const isPending = isBilled && a.billing?.payment_status === "pending"
           const isPaid = isBilled && a.billing?.payment_status === "paid"
           return (
-          <article
-            key={a.id}
-            className={`rounded-xl p-3.5 shadow-sm transition-all duration-200 mb-3 border ${
-              isPaid
+            <article
+              key={a.id}
+              className={`rounded-xl p-3.5 shadow-sm transition-all duration-200 mb-3 border ${isPaid
                 ? "bg-gray-50 text-gray-400 border-gray-200 opacity-70"
                 : "bg-white hover:shadow-md border-gray-100"
-            }`}
-          >
-            <div className="flex justify-between items-start gap-3">
-              <div className="flex-grow min-w-0">
-                <p className={`font-semibold text-base truncate ${isPaid ? "text-gray-400" : "text-gray-900"}`}>
-                  {a.customer_name}
-                  {a.family_member && <span className="text-sm font-normal text-purple-600"> → {a.family_member.name}</span>}
-                </p>
-                <div className="flex flex-wrap gap-1.5 mt-1.5">
-                  <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">
-                    {formatTimeDisplayIST(a.scheduled_start)}
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded font-medium uppercase ${
-                    a.status === "completed"
+                }`}
+            >
+              <div className="flex justify-between items-start gap-3">
+                <div className="flex-grow min-w-0">
+                  <p className={`font-semibold text-base truncate ${isPaid ? "text-gray-400" : "text-gray-900"}`}>
+                    {a.customer_name}
+                    {a.family_member && <span className="text-sm font-normal text-purple-600"> → {a.family_member.name}</span>}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">
+                      {formatTimeDisplayIST(a.scheduled_start)}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded font-medium uppercase ${a.status === "completed"
                       ? "bg-emerald-50 text-emerald-700"
                       : a.status === "confirmed"
-                      ? "bg-blue-50 text-blue-700"
-                      : "bg-amber-50 text-amber-700"
-                  }`}>
-                    {a.status}
-                  </span>
-                  {a.family_member && (
-                    <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-medium">
-                      {a.family_member.age_group}
+                        ? "bg-blue-50 text-blue-700"
+                        : "bg-amber-50 text-amber-700"
+                      }`}>
+                      {a.status}
                     </span>
-                  )}
-                  {isPending && (
-                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-semibold uppercase">
-                      Payment Pending
-                    </span>
-                  )}
-                  {isPaid && (
-                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-semibold uppercase">
-                      Paid
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-600 mt-2 line-clamp-1">
-                  <span className="font-medium">Services:</span> {(a.selected_servicesIds || []).map((sid) => serviceMap[sid] || sid).join(", ") || "-"}
-                </p>
-                {/* <p className="text-xs text-gray-600 line-clamp-1">
+                    {a.family_member && (
+                      <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-medium">
+                        {a.family_member.age_group}
+                      </span>
+                    )}
+                    {isPending && (
+                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-semibold uppercase">
+                        Payment Pending
+                      </span>
+                    )}
+                    {isPaid && (
+                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-semibold uppercase">
+                        Paid
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-2 line-clamp-1">
+                    <span className="font-medium">Services:</span> {(a.selected_servicesIds || []).map((sid) => serviceMap[sid] || sid).join(", ") || "-"}
+                  </p>
+                  {/* <p className="text-xs text-gray-600 line-clamp-1">
                   <span className="font-medium">Staff:</span> {(a.selected_staffIds || []).map((sid) => staffMap[sid] || sid).join(", ") || "-"}
                 </p> */}
-              </div>
-              {!isPaid && (
-              <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                <button
-                  className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium shadow-sm transition-colors active:scale-95"
-                  title="View Details"
-                  onClick={() => setDetailsId(a.id)}
-                >
-                  Details
-                </button>
-                {isPending && (
-                  <button
-                    className="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-sm transition-colors active:scale-95 flex items-center gap-1"
-                    onClick={() => markAsPaid(a.id)}
-                    disabled={updatingPayment === a.id}
-                  >
-                    {updatingPayment === a.id ? (
-                      <>
-                        <Loader size={12} className="animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle size={12} />
-                        Mark Paid
-                      </>
+                </div>
+                {!isPaid && (
+                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    <button
+                      className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium shadow-sm transition-colors active:scale-95"
+                      title="View Details"
+                      onClick={() => setDetailsId(a.id)}
+                    >
+                      Details
+                    </button>
+                    {isPending && (
+                      <button
+                        className="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-sm transition-colors active:scale-95 flex items-center gap-1"
+                        onClick={() => markAsPaid(a.id)}
+                        disabled={updatingPayment === a.id}
+                      >
+                        {updatingPayment === a.id ? (
+                          <>
+                            <Loader size={12} className="animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle size={12} />
+                            Mark Paid
+                          </>
+                        )}
+                      </button>
                     )}
-                  </button>
-                )}
-                {!isBilled && (
-                  <div>
-                    <AddActualServicesButton
-                      appointmentId={a.id}
-                      services={services}
-                      staff={staff}
-                      currentStaffMember={currentStaffMember}
-                      currentUser={currentUser}
-                      onAdded={() => mutate()}
-                    />
-                  </div>
-                )}
-                {/* <button
+                    {!isBilled && (
+                      <div>
+                        <AddActualServicesButton
+                          appointmentId={a.id}
+                          services={services}
+                          staff={staff}
+                          currentStaffMember={currentStaffMember}
+                          currentUser={currentUser}
+                          onAdded={() => mutate()}
+                        />
+                      </div>
+                    )}
+                    {/* <button
                   className="text-red-600 hover:text-red-700 font-medium text-xs hover:bg-red-50 px-2 py-1 rounded-lg transition"
                   onClick={() => setDeleteConfirm(a.id)}
                 >
                   Delete
                 </button> */}
+                  </div>
+                )}
               </div>
-              )}
-            </div>
-          </article>
-        )
+            </article>
+          )
         })}
       </section>
 
@@ -374,30 +371,32 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
   const [customer, setCustomer] = useState<any>(null)
   const [selectedMember, setSelectedMember] = useState<any>(null) // null for self, object for family member
   const [familyMembers, setFamilyMembers] = useState<any[]>([])
-  
+
   const [notes, setNotes] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
-  
+
   const { date: todayIST, time: nowIST } = getISTDateTime()
   const [date, setDate] = useState(todayIST)
   const [time, setTime] = useState(nowIST)
   const isToday = date === todayIST
-  
-  const [selectedServices, setSelectedServices] = useState<Array<{serviceId: number, serviceName: string, categoryName: string, staffId: number | null, staffName: string | null}>>([])
+
+  const [selectedServices, setSelectedServices] = useState<Array<{ serviceId: number, serviceName: string, categoryName: string, staffId: number | null, staffName: string | null }>>([])
   const [loading, setLoading] = useState(false)
 
-  // Fetch customer details by mobile number
-  const handleFetchDetails = async () => {
-    if (!mobileNumber.trim()) {
+  // Fetch customer details by mobile number or provided override
+  const handleFetchDetails = async (phoneOverride?: string | any) => {
+    const phoneToCheck = typeof phoneOverride === "string" ? phoneOverride : mobileNumber
+
+    if (!phoneToCheck.trim()) {
       onError?.("Please enter a mobile number")
       return
     }
-    
+
     setLookupLoading(true)
     try {
-      const res = await fetch(`/api/customers/lookup?phone=${encodeURIComponent(mobileNumber)}`)
+      const res = await fetch(`/api/customers/lookup?phone=${encodeURIComponent(phoneToCheck)}`)
       const data = await res.json()
-      
+
       if (data.found && data.customer) {
         setCustomer(data.customer)
         setFamilyMembers(data.customer.familyMembers || [])
@@ -409,7 +408,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
           first_name: "",
           last_name: "",
           email: "",
-          phone: mobileNumber,
+          phone: phoneToCheck,
           familyMembers: []
         })
         setFamilyMembers([])
@@ -422,17 +421,26 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
     }
   }
 
+  const handleAutoGenerate = () => {
+    const random5 = Math.floor(10000 + Math.random() * 90000); // 5 digits
+    const generated = `UNISL${random5}`;
+
+    setMobileNumber(generated);
+    handleFetchDetails(generated);
+  };
+
+
   // Add family member - must create customer first if new
   const handleAddFamilyMember = async (memberData: any) => {
     let customerId = customer?.id
-    
+
     // If customer doesn't exist yet, create them first
     if (!customerId) {
+      // Default name to "untitled" if empty
       if (!customer?.first_name?.trim()) {
-        onError?.("Please enter customer name first")
-        return
+        customer.first_name = "untitled"
       }
-      
+
       try {
         const customerRes = await fetch("/api/customers", {
           method: "POST",
@@ -445,7 +453,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
             gender: customer.gender || null
           })
         })
-        
+
         if (customerRes.ok) {
           const newCustomer = await customerRes.json()
           customerId = newCustomer.id
@@ -460,7 +468,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
         return
       }
     }
-    
+
     // Now add the family member
     try {
       const res = await fetch(`/api/customers/${customerId}/family-members`, {
@@ -468,7 +476,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(memberData)
       })
-      
+
       if (res.ok) {
         const newMember = await res.json()
         setFamilyMembers([...familyMembers, newMember])
@@ -484,7 +492,9 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
 
   // Validate and proceed to service selection
   const handleProceedToServices = () => {
-    if (!customer?.id && !customer?.first_name) {
+    // If name is empty, we'll treat it as "untitled" later, so we allow proceeding
+    // just need to make sure we have started the creation process (have a placeholder customer object)
+    if (!customer) {
       onError?.("Please enter customer details")
       return
     }
@@ -493,7 +503,8 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-    if (!customer?.first_name?.trim()) newErrors.first_name = "First name is required"
+    // First name is optional now, defaults to "untitled" if empty
+    // if (!customer?.first_name?.trim()) newErrors.first_name = "First name is required"
     if (!mobileNumber.trim()) newErrors.phone = "Phone is required"
     if (mobileNumber.trim().length !== 10) newErrors.phone = "Phone must be 10 digits"
     if (selectedServices.length === 0) newErrors.services = "Select at least one service"
@@ -519,7 +530,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            first_name: customer.first_name,
+            first_name: customer.first_name || "untitled",
             last_name: customer.last_name || "",
             email: customer.email || "",
             phone: mobileNumber,
@@ -613,7 +624,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
                       +91
                     </div>
                     <input
-                      type="tel"
+                      type="text"
                       className="w-full border-2 border-indigo-200 rounded-xl pl-12 md:pl-14 pr-16 md:pr-20 py-3 md:py-4 text-base md:text-lg font-medium focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
                       placeholder="Enter 10-digit number"
                       value={mobileNumber}
@@ -634,6 +645,15 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
                       </div>
                     )}
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleAutoGenerate}
+                    className="w-full sm:w-auto px-4 py-3 md:py-4 rounded-xl bg-purple-100 text-purple-700 font-semibold shadow-sm hover:bg-purple-200 transition-all flex items-center justify-center gap-2"
+                    title="Auto-generate 10-digit ID"
+                  >
+                    <Sparkles size={20} />
+                    <span className="text-sm md:text-base">UNISL</span>
+                  </button>
                   <button
                     type="button"
                     onClick={handleFetchDetails}
@@ -680,7 +700,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
                         className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
                         placeholder="First name"
                         value={customer?.first_name || ""}
-                        onChange={(e) => setCustomer({...customer, first_name: e.target.value})}
+                        onChange={(e) => setCustomer({ ...customer, first_name: e.target.value })}
                         required
                       />
                     </div>
@@ -690,7 +710,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
                         className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
                         placeholder="Last name (optional)"
                         value={customer?.last_name || ""}
-                        onChange={(e) => setCustomer({...customer, last_name: e.target.value})}
+                        onChange={(e) => setCustomer({ ...customer, last_name: e.target.value })}
                       />
                     </div>
                     <div>
@@ -698,7 +718,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
                       <select
                         className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
                         value={customer?.gender || ""}
-                        onChange={(e) => setCustomer({...customer, gender: e.target.value})}
+                        onChange={(e) => setCustomer({ ...customer, gender: e.target.value })}
                       >
                         <option value="">Select gender</option>
                         <option value="male">Male</option>
@@ -713,7 +733,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
                         className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition"
                         placeholder="Email (optional)"
                         value={customer?.email || ""}
-                        onChange={(e) => setCustomer({...customer, email: e.target.value})}
+                        onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
                       />
                     </div>
                   </div>
@@ -859,14 +879,14 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
 function DetailsModal({ appt, onClose }) {
   const serviceMap = useMemo(() => {
     const map = {}
-    ;(appt?.services || []).forEach((s) => (map[s.id] = s.name))
+      ; (appt?.services || []).forEach((s) => (map[s.id] = s.name))
     return map
   }, [appt?.services])
   const staffMap = useMemo(() => {
     const map = {}
-    ;(appt?.staff || []).forEach(
-      (st) => (map[st.id] = st.name || `${st.first_name || ""} ${st.last_name || ""}`.trim()),
-    )
+      ; (appt?.staff || []).forEach(
+        (st) => (map[st.id] = st.name || `${st.first_name || ""} ${st.last_name || ""}`.trim()),
+      )
     return map
   }, [appt?.staff])
   const [edit, setEdit] = useState(false)
@@ -922,14 +942,14 @@ function DetailsModal({ appt, onClose }) {
         },
       }),
     })
-    
+
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({ error: "Failed to update appointment" }))
       setToastConfig({ type: "error", message: errorData.error || "Failed to update appointment" })
       setSaving(false)
       return
     }
-    
+
     setSaving(false)
     setEdit(false)
     if (typeof window !== "undefined") window.location.reload() // or trigger mutate if you want to be more efficient
@@ -1040,11 +1060,10 @@ function DetailsModal({ appt, onClose }) {
                 <button
                   key={status}
                   type="button"
-                  className={`px-3 py-2 rounded-lg border-2 font-medium text-xs transition-all ${
-                    form.status === status
-                      ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white border-indigo-700"
-                      : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"
-                  }`}
+                  className={`px-3 py-2 rounded-lg border-2 font-medium text-xs transition-all ${form.status === status
+                    ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white border-indigo-700"
+                    : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"
+                    }`}
                   onClick={() => setForm((f) => ({ ...f, status }))}
                 >
                   {status.replace("_", " ")}
@@ -1098,7 +1117,7 @@ function DetailsModal({ appt, onClose }) {
           </div>
         </form>
       </div>
-      
+
       {/* Toast Notification */}
       {toastConfig && (
         <Toast
@@ -1125,7 +1144,7 @@ function ActualServicesModal({ appointmentId, services, staff, currentStaffMembe
     if (!Array.isArray(actuals)) return []
     return actuals
   }, [actuals])
-  
+
   // Check if user can edit/delete a service
   const canModifyService = (svc) => {
     // Admin and receptionist can modify everything
@@ -1197,85 +1216,85 @@ function ActualServicesModal({ appointmentId, services, staff, currentStaffMembe
               {filteredActuals.map((svc) => {
                 const staffMember = staff.find(st => st.id === svc.doneby_staff_id)
                 const staffName = staffMember?.name || "Unassigned"
-                
+
                 return (
-                <div
-                  key={svc.id}
-                  className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="p-4">
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-3 mb-3 pb-3 border-b border-gray-100">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-900 text-base truncate">{svc.service_name}</h4>
-                        <p className="text-xs text-gray-500 mt-0.5">Service #{svc.id}</p>
-                      </div>
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full uppercase flex-shrink-0 ${
-                          svc.status === "completed"
+                  <div
+                    key={svc.id}
+                    className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="p-4">
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-3 mb-3 pb-3 border-b border-gray-100">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-gray-900 text-base truncate">{svc.service_name}</h4>
+                          <p className="text-xs text-gray-500 mt-0.5">Service #{svc.id}</p>
+                        </div>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full uppercase flex-shrink-0 ${svc.status === "completed"
                             ? "bg-emerald-100 text-emerald-700"
                             : svc.status === "in_service"
                               ? "bg-blue-100 text-blue-700"
                               : svc.status === "canceled"
                                 ? "bg-red-100 text-red-700"
                                 : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {svc.status === "completed" && <CheckCircle size={12} />}
-                        {svc.status.replace("_", " ")}
-                      </span>
-                    </div>
+                            }`}
+                        >
+                          {svc.status === "completed" && <CheckCircle size={12} />}
+                          {svc.status.replace("_", " ")}
+                        </span>
+                      </div>
 
-                    {/* Details */}
-                    <div className="space-y-2 mb-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Price</span>
-                        <span className="text-lg font-bold text-gray-900">₹{svc.price || 0}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Staff</span>
-                        <span className="text-sm font-semibold text-gray-900">{staffName}</span>
-                      </div>
-                      {svc.gst_percentage && (
+                      {/* Details */}
+                      <div className="space-y-2 mb-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">GST</span>
-                          <span className="text-sm font-medium text-gray-900">{svc.gst_percentage}%</span>
+                          <span className="text-sm text-gray-600">Price</span>
+                          <span className="text-lg font-bold text-gray-900">₹{svc.price || 0}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Staff</span>
+                          <span className="text-sm font-semibold text-gray-900">{staffName}</span>
+                        </div>
+                        {svc.gst_percentage && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">GST</span>
+                            <span className="text-sm font-medium text-gray-900">{svc.gst_percentage}%</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Notes */}
+                      {svc.notes && (
+                        <div className="bg-amber-50 rounded-lg p-3 mb-3">
+                          <p className="text-xs font-semibold text-amber-700 mb-1">Notes</p>
+                          <p className="text-sm text-amber-900">{svc.notes}</p>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      {canModifyService(svc) && (
+                        <div className="flex gap-2 pt-3 border-t border-gray-100">
+                          <button
+                            className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2"
+                            onClick={() => setEditRow(svc)}
+                            type="button"
+                          >
+                            <Pencil size={14} />
+                            Edit
+                          </button>
+                          <button
+                            className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2"
+                            onClick={() => setDeleteActualConfirm(svc.id)}
+                            type="button"
+                          >
+                            <X size={14} />
+                            Delete
+                          </button>
                         </div>
                       )}
                     </div>
-
-                    {/* Notes */}
-                    {svc.notes && (
-                      <div className="bg-amber-50 rounded-lg p-3 mb-3">
-                        <p className="text-xs font-semibold text-amber-700 mb-1">Notes</p>
-                        <p className="text-sm text-amber-900">{svc.notes}</p>
-                      </div>
-                    )}
-
-                    {/* Actions */}
-                    {canModifyService(svc) && (
-                      <div className="flex gap-2 pt-3 border-t border-gray-100">
-                        <button
-                          className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2"
-                          onClick={() => setEditRow(svc)}
-                          type="button"
-                        >
-                          <Pencil size={14} />
-                          Edit
-                        </button>
-                        <button
-                          className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2"
-                          onClick={() => setDeleteActualConfirm(svc.id)}
-                          type="button"
-                        >
-                          <X size={14} />
-                          Delete
-                        </button>
-                      </div>
-                    )}
                   </div>
-                </div>
-              )})}
+                )
+              })}
             </div>
           )}
         </div>
@@ -1334,7 +1353,7 @@ function ActualServicesModal({ appointmentId, services, staff, currentStaffMembe
           />
         )}
       </div>
-      
+
       {/* Toast Notification */}
       {toastConfig && (
         <Toast
@@ -1505,11 +1524,10 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
               <button
                 key={status}
                 type="button"
-                className={`px-3 py-2 rounded-lg border-2 font-medium text-xs transition-all ${
-                  form.status === status
-                    ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white border-indigo-700"
-                    : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"
-                }`}
+                className={`px-3 py-2 rounded-lg border-2 font-medium text-xs transition-all ${form.status === status
+                  ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white border-indigo-700"
+                  : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"
+                  }`}
                 onClick={() => setForm((f) => ({ ...f, status }))}
               >
                 {status === "in_service" ? "In Service" : status.charAt(0).toUpperCase() + status.slice(1)}
@@ -1549,7 +1567,7 @@ function EditServiceModal({ row, services, staff, appointmentId, onClose, onSave
           )}
         </button>
       </form>
-      
+
       {/* Toast Notification - z-index higher than modal */}
       {toastConfig && (
         <Toast
@@ -1723,11 +1741,10 @@ function AddServiceModal({ services, staff, currentStaffMember, appointmentId, o
               <button
                 key={status}
                 type="button"
-                className={`px-3 py-2 rounded-lg border-2 font-medium text-xs transition-all ${
-                  form.status === status
-                    ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white border-indigo-700"
-                    : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"
-                }`}
+                className={`px-3 py-2 rounded-lg border-2 font-medium text-xs transition-all ${form.status === status
+                  ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white border-indigo-700"
+                  : "bg-white text-gray-700 border-gray-300 hover:border-indigo-400"
+                  }`}
                 onClick={() => setForm((f) => ({ ...f, status }))}
               >
                 {status === "in_service" ? "In Service" : status.charAt(0).toUpperCase() + status.slice(1)}
@@ -1768,7 +1785,7 @@ function AddServiceModal({ services, staff, currentStaffMember, appointmentId, o
           )}
         </button>
       </form>
-      
+
       {/* Toast Notification - z-index higher than modal */}
       {toastConfig && (
         <Toast

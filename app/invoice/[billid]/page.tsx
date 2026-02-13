@@ -135,6 +135,19 @@ export default function PublicInvoicePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [billid])
 
+  // Auto-print if requested
+  useEffect(() => {
+    if (!loading && appointment) {
+      const searchParams = new URLSearchParams(window.location.search)
+      if (searchParams.get('print') === 'true') {
+        // slight delay to ensure rendering is complete
+        setTimeout(() => {
+          window.print()
+        }, 500)
+      }
+    }
+  }, [loading, appointment])
+
   if (loading) return <div className="p-12"><LoadingSpinner message="Loading invoice..." /></div>
 
   if (!appointment) return (
@@ -189,147 +202,149 @@ export default function PublicInvoicePage() {
       <div className="max-w-screen-md mx-auto">
         <div className="bg-white rounded-xl shadow overflow-hidden border border-gray-100">
           <div
-      style={{
-        width: "100%",
-        padding: "20px 24px",
-        background: "#0b0b0b",
-        color: "#ffffff",
-        borderBottom: "3px solid #059669",
-        boxSizing: "border-box",
-        fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: "20px",
-        }}
-      >
-        {/* LEFT : LOGO + BUSINESS DETAILS */}
-        <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
-          {/* LOGO */}
-          <div
             style={{
-              width: "72px",
-              height: "72px",
-              borderRadius: "10px",
-              background: "rgba(255,255,255,0.08)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              overflow: "hidden",
-              flexShrink: 0,
+              width: "100%",
+              padding: "20px 24px",
+              background: "#0b0b0b",
+              color: "#ffffff",
+              borderBottom: "3px solid #059669",
+              boxSizing: "border-box",
+              fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+              WebkitPrintColorAdjust: "exact",
+              printColorAdjust: "exact",
             }}
           >
-            <img
-              src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxKCpWlrl5Q6h27fXSHKJzR4JbuhWHONz4Ow&s"
-              alt="Unisalon Logo"
-              style={{
-                width: "60px",
-                height: "auto",
-                objectFit: "contain",
-              }}
-            />
-          </div>
-
-          {/* BUSINESS INFO */}
-          <div>
             <div
               style={{
-                fontSize: "22px",
-                fontWeight: 700,
-                letterSpacing: "0.5px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: "20px",
               }}
             >
-              UNISALON
-            </div>
+              {/* LEFT : LOGO + BUSINESS DETAILS */}
+              <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
+                {/* LOGO */}
+                <div
+                  style={{
+                    width: "72px",
+                    height: "72px",
+                    borderRadius: "10px",
+                    background: "rgba(255,255,255,0.08)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                    flexShrink: 0,
+                  }}
+                >
+                  <img
+                    src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxKCpWlrl5Q6h27fXSHKJzR4JbuhWHONz4Ow&s"
+                    alt="Unisalon Logo"
+                    style={{
+                      width: "60px",
+                      height: "auto",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
 
-            <div
-              style={{
-                fontSize: "12px",
-                fontWeight: 600,
-                opacity: 0.9,
-                marginTop: "2px",
-              }}
-            >
-              By Shashi
-            </div>
+                {/* BUSINESS INFO */}
+                <div>
+                  <div
+                    style={{
+                      fontSize: "22px",
+                      fontWeight: 700,
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    UNISALON
+                  </div>
 
-            <div
-              style={{
-                fontSize: "12px",
-                marginTop: "6px",
-                lineHeight: "1.45",
-                color: "rgba(255,255,255,0.92)",
-                maxWidth: "460px",
-              }}
-            >
-              110, Road No. 16, Alkapur Twp, Manikonda,
-              <br />
-              Hyderabad – 500 089
-            </div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      opacity: 0.9,
+                      marginTop: "2px",
+                    }}
+                  >
+                    By Shashi
+                  </div>
 
-            <div
-              style={{
-                fontSize: "12px",
-                marginTop: "6px",
-                color: "rgba(255,255,255,0.9)",
-              }}
-            >
-              📧 info@unisalon.in &nbsp; | &nbsp; 📞 +91 76708 26262
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      marginTop: "6px",
+                      lineHeight: "1.45",
+                      color: "rgba(255,255,255,0.92)",
+                      maxWidth: "460px",
+                    }}
+                  >
+                    110, Road No. 16, Alkapur Twp, Manikonda,
+                    <br />
+                    Hyderabad – 500 089
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      marginTop: "6px",
+                      color: "rgba(255,255,255,0.9)",
+                    }}
+                  >
+                    📧 info@unisalon.in &nbsp; | &nbsp; 📞 +91 76708 26262
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT : INVOICE DETAILS */}
+              <div style={{ textAlign: "right", minWidth: "180px" }}>
+                <h1
+                  style={{
+                    fontSize: "20px",
+                    fontWeight: 700,
+                    margin: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: "8px",
+                  }}
+                >
+                  Invoice
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "#34d399",
+                    }}
+                  >
+                    #{invoiceData.billId}
+                  </span>
+                </h1>
+
+                <div
+                  style={{
+                    fontSize: "12px",
+                    marginTop: "6px",
+                    opacity: 0.9,
+                  }}
+                >
+                  {invoiceData.appointmentDate}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "12px",
+                    marginTop: "2px",
+                    opacity: 0.9,
+                  }}
+                >
+                  {invoiceData.appointmentTime}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* RIGHT : INVOICE DETAILS */}
-        <div style={{ textAlign: "right", minWidth: "180px" }}>
-          <h1
-            style={{
-              fontSize: "20px",
-              fontWeight: 700,
-              margin: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              gap: "8px",
-            }}
-          >
-            Invoice
-            <span
-              style={{
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "#34d399",
-              }}
-            >
-              #{invoiceData.billId}
-            </span>
-          </h1>
-
-          <div
-            style={{
-              fontSize: "12px",
-              marginTop: "6px",
-              opacity: 0.9,
-            }}
-          >
-            {invoiceData.appointmentDate}
-          </div>
-
-          <div
-            style={{
-              fontSize: "12px",
-              marginTop: "2px",
-              opacity: 0.9,
-            }}
-          >
-            {invoiceData.appointmentTime}
-          </div>
-        </div>
-      </div>
-    </div>
 
           <div className="p-6 space-y-4">
             <div className="flex justify-between">
@@ -369,24 +384,92 @@ export default function PublicInvoicePage() {
               </table>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-700">Subtotal:</span>
-                <span className="font-semibold">₹{invoiceData.subtotal.toFixed(2)}</span>
-              </div>
-              {invoiceData.discount > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-green-700">Discount:</span>
-                  <span className="font-semibold text-green-700">-₹{invoiceData.discount.toFixed(2)}</span>
+            <div className="space-y-4 pt-4 border-t border-gray-200">
+
+              {/* GST Breakdown Box - mimicking PDF style */}
+              {invoiceData.gstTotal > 0 && (
+                <div style={{ backgroundColor: '#fef3c7', padding: '12px', borderRadius: '4px', border: '1px solid #fcd34d', WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+                  <p className="text-xs font-bold text-amber-800 uppercase mb-2">GST Breakdown</p>
+                  <div className="flex justify-between text-xs text-amber-900">
+                    <span>GST:</span>
+                    <span className="font-semibold">₹{invoiceData.gstTotal.toFixed(2)}</span>
+                  </div>
                 </div>
               )}
-              <div className="flex justify-between text-lg font-bold pt-3 border-t">
-                <span>Total:</span>
-                <span className="text-2xl text-emerald-700">₹{invoiceData.finalAmount.toFixed(2)}</span>
+
+              {/* Subtotals */}
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Base Amount (excl. GST):</span>
+                  <span className="font-semibold text-gray-900">₹{invoiceData.baseTotal.toFixed(2)}</span>
+                </div>
+                {invoiceData.gstTotal > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total GST:</span>
+                    <span className="font-semibold text-gray-900">₹{invoiceData.gstTotal.toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between font-bold pt-2 border-t border-gray-100">
+                  <span className="text-gray-800">Subtotal (incl. GST):</span>
+                  <span>₹{invoiceData.subtotal.toFixed(2)}</span>
+                </div>
+
+                {invoiceData.discount > 0 && (
+                  <div className="flex justify-between text-green-700">
+                    <span>Discount:</span>
+                    <span>-₹{invoiceData.discount.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Final Amount Bar */}
+              <div
+                style={{
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  padding: '12px 16px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '16px',
+                  WebkitPrintColorAdjust: "exact",
+                  printColorAdjust: "exact"
+                }}
+              >
+                <span style={{ fontSize: '16px', fontWeight: 'bold' }}>Final Amount:</span>
+                <span style={{ fontSize: '20px', fontWeight: 'bold' }}>₹{invoiceData.finalAmount.toFixed(2)}</span>
+              </div>
+
+              {/* Payment Information */}
+              <div
+                style={{
+                  backgroundColor: '#f3f4f6',
+                  padding: '16px',
+                  borderRadius: '6px',
+                  marginTop: '16px',
+                  WebkitPrintColorAdjust: "exact",
+                  printColorAdjust: "exact"
+                }}
+              >
+                <p className="text-xs font-bold text-gray-500 uppercase mb-2">Payment Information</p>
+                <div className="grid grid-cols-2 gap-y-2 text-sm">
+                  <div className="text-gray-600">Paid Amount:</div>
+                  <div className="font-semibold text-gray-900">₹{invoiceData.paidAmount?.toFixed(2) || invoiceData.finalAmount.toFixed(2)}</div>
+
+                  <div className="text-gray-600">Payment Method:</div>
+                  <div className="font-semibold text-gray-900 uppercase">{invoiceData.paymentMethod}</div>
+
+                  <div className="text-gray-600">Payment Status:</div>
+                  <div className={`font-semibold uppercase ${invoiceData.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
+                    {invoiceData.paymentStatus}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 print:hidden">
               <button
                 onClick={() => downloadInvoicePDF(invoiceData)}
                 className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg"

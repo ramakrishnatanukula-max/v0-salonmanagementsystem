@@ -1,7 +1,7 @@
 "use client"
 import React, { useState } from "react"
 import useSWR from "swr"
-import { X, ChevronDown, ChevronUp, Mail, Check, AlertCircle } from "lucide-react"
+import { X, ChevronDown, ChevronUp, Mail, Check, AlertCircle, Printer } from "lucide-react"
 import Toast from "@/components/Toast"
 import ConfirmDialog from "@/components/ConfirmDialog"
 import LoadingSpinner from "@/components/LoadingSpinner"
@@ -41,14 +41,14 @@ export default function BillingPage() {
 
   // Calculate billing summary from actual services
   const appointmentsList = Array.isArray(appts) ? appts : []
-  
+
   // Calculate total invoiced from actual_services_total (which includes all actual services performed)
   const totalBilled = appointmentsList.reduce((sum: number, a: any) => {
     // Use actual_services_total if available (from API), otherwise use billing amount
     const amount = a.actual_services_total || a.billing?.final_amount || a.billing?.total_amount || a.final_amount || a.total_amount || 0
     return sum + Number(amount || 0)
   }, 0)
-  
+
   const totalPaid = appointmentsList.reduce((sum: number, a: any) => {
     const status = a.billing?.payment_status || a.payment_status
     if (status === "paid") {
@@ -58,11 +58,11 @@ export default function BillingPage() {
     }
     return sum
   }, 0)
-  
+
   const totalPending = Number(totalBilled || 0) - Number(totalPaid || 0)
   const completedBilling = appointmentsList.filter((a: any) => a.billing?.id || a.billing_id).length
   const pendingBilling = appointmentsList.filter((a: any) => !(a.billing?.id || a.billing_id)).length
-  
+
   // Filter appointments
   const paidAppointments = appointmentsList.filter((a: any) => {
     const status = a.billing?.payment_status || a.payment_status
@@ -113,7 +113,7 @@ export default function BillingPage() {
       {/* Content */}
       <section className="flex-1 px-4 sm:px-6 py-4 max-w-4xl mx-auto w-full">
         {isLoading && <LoadingSpinner message="Loading billing data..." />}
-        
+
         {!isLoading && appointmentsList.length === 0 && (
           <div className="mt-12 text-center">
             <div className="text-6xl mb-4">📊</div>
@@ -123,71 +123,70 @@ export default function BillingPage() {
         )}
 
         {!isLoading && (
-        <div className="space-y-3">
-          {displayList.map((a: any) => {
-            const isOpen = openId === a.id
-            const isBilled = !!(a.billing?.id || a.billing_id)
-            const isPaid = (a.billing?.payment_status || a.payment_status) === "paid"
-            const amount = a.billing?.final_amount || a.billing?.total_amount || a.final_amount || a.total_amount
-            
-            return (
-              <div
-                key={a.id}
-                className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all border ${
-                  isPaid ? "border-emerald-300 bg-emerald-50/30" : isBilled ? "border-blue-300" : "border-gray-200"
-                }`}
-              >
-                <button
-                  className="w-full flex items-center justify-between p-4 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-emerald-50 transition-colors rounded-xl"
-                  onClick={() => setOpenId(isOpen ? null : a.id)}
-                >
-                  <div className="text-left flex-1">
-                    <div className="flex items-center gap-2">
-                      <div className="font-bold text-base text-gray-900">{a.customer_name}</div>
-                      {isPaid && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-200 text-emerald-800 flex items-center gap-1">
-                          ✓ Paid
-                        </span>
-                      )}
-                      {isBilled && !isPaid && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-200 text-blue-800">
-                          📝 Billed
-                        </span>
-                      )}
-                      {!isBilled && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-200 text-orange-800">
-                          ⏳ Pending
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
-                      <span>📅 {formatDateDisplayIST(a.scheduled_start)}</span>
-                      <span>🕐 {formatTimeDisplayIST(a.scheduled_start)}</span>
-                      {amount && (
-                        <span className="font-semibold text-gray-700">₹{Number(amount || 0).toFixed(2)}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="ml-2">
-                    {isOpen ? (
-                      <ChevronUp className="text-indigo-600 flex-shrink-0" size={20} />
-                    ) : (
-                      <ChevronDown className="text-gray-400 flex-shrink-0" size={20} />
-                    )}
-                  </div>
-                </button>
+          <div className="space-y-3">
+            {displayList.map((a: any) => {
+              const isOpen = openId === a.id
+              const isBilled = !!(a.billing?.id || a.billing_id)
+              const isPaid = (a.billing?.payment_status || a.payment_status) === "paid"
+              const amount = a.billing?.final_amount || a.billing?.total_amount || a.final_amount || a.total_amount
 
-                {isOpen ? (
-                  <AppointmentServicesPanel
-                    appointment={a}
-                    onPaid={() => mutate()}
-                    onNotify={(msg, type) => setToastConfig({ type, message: msg })}
-                  />
-                ) : null}
-              </div>
-            )
-          })}
-        </div>
+              return (
+                <div
+                  key={a.id}
+                  className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all border ${isPaid ? "border-emerald-300 bg-emerald-50/30" : isBilled ? "border-blue-300" : "border-gray-200"
+                    }`}
+                >
+                  <button
+                    className="w-full flex items-center justify-between p-4 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-emerald-50 transition-colors rounded-xl"
+                    onClick={() => setOpenId(isOpen ? null : a.id)}
+                  >
+                    <div className="text-left flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="font-bold text-base text-gray-900">{a.customer_name}</div>
+                        {isPaid && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-200 text-emerald-800 flex items-center gap-1">
+                            ✓ Paid
+                          </span>
+                        )}
+                        {isBilled && !isPaid && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-200 text-blue-800">
+                            📝 Billed
+                          </span>
+                        )}
+                        {!isBilled && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-200 text-orange-800">
+                            ⏳ Pending
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
+                        <span>📅 {formatDateDisplayIST(a.scheduled_start)}</span>
+                        <span>🕐 {formatTimeDisplayIST(a.scheduled_start)}</span>
+                        {amount && (
+                          <span className="font-semibold text-gray-700">₹{Number(amount || 0).toFixed(2)}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="ml-2">
+                      {isOpen ? (
+                        <ChevronUp className="text-indigo-600 flex-shrink-0" size={20} />
+                      ) : (
+                        <ChevronDown className="text-gray-400 flex-shrink-0" size={20} />
+                      )}
+                    </div>
+                  </button>
+
+                  {isOpen ? (
+                    <AppointmentServicesPanel
+                      appointment={a}
+                      onPaid={() => mutate()}
+                      onNotify={(msg, type) => setToastConfig({ type, message: msg })}
+                    />
+                  ) : null}
+                </div>
+              )
+            })}
+          </div>
         )}
       </section>
 
@@ -226,7 +225,7 @@ function AppointmentServicesPanel({
   const { data: items, isLoading } = useActuals(appointment.id, true)
   const totals = computeTotals(items || [])
   const [showModal, setShowModal] = useState(false)
-  
+
   // Check if already billed/paid - handle both nested and flat structures
   const isBilled = !!(appointment.billing?.id || appointment.billing_id)
   const isPaid = (appointment.billing?.payment_status || appointment.payment_status) === "paid"
@@ -238,12 +237,12 @@ function AppointmentServicesPanel({
     // Calculate base amount: total / (1 + gst%/100)
     const baseAmount = gstPercentage > 0 ? totalPrice / (1 + gstPercentage / 100) : totalPrice
     const gstAmount = totalPrice - baseAmount
-    return { 
-      ...it, 
-      baseAmount, 
-      gstAmount, 
+    return {
+      ...it,
+      baseAmount,
+      gstAmount,
       gstPercentage,
-      lineTotal: totalPrice 
+      lineTotal: totalPrice
     }
   })
 
@@ -404,6 +403,20 @@ function AppointmentServicesPanel({
             >
               ✉️ Send Email
             </button>
+            <button
+              type="button"
+              className="px-3 py-1 rounded-md bg-slate-600 text-white text-sm font-semibold hover:bg-slate-700 transition flex items-center gap-1"
+              onClick={() => {
+                const billId = appointment.billing?.id || appointment.billing_id
+                if (billId) {
+                  window.open(`/invoice/${billId}?print=true`, '_blank')
+                } else {
+                  onNotify("Bill ID not found", "error")
+                }
+              }}
+            >
+              <Printer size={14} /> Print Bill
+            </button>
           </div>
         </div>
       )}
@@ -443,13 +456,12 @@ function AppointmentServicesPanel({
 
       <button
         disabled={isPaid}
-        className={`mt-3 w-full rounded-lg px-4 py-2 font-semibold text-sm shadow transition-all ${
-          isPaid
+        className={`mt-3 w-full rounded-lg px-4 py-2 font-semibold text-sm shadow transition-all ${isPaid
             ? "bg-gray-300 text-gray-600 cursor-not-allowed opacity-60"
             : isBilled
-            ? "bg-amber-600 text-white hover:bg-amber-700 hover:shadow-md"
-            : "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white hover:shadow-md hover:brightness-110"
-        }`}
+              ? "bg-amber-600 text-white hover:bg-amber-700 hover:shadow-md"
+              : "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white hover:shadow-md hover:brightness-110"
+          }`}
         onClick={() => setShowModal(true)}
       >
         {isPaid ? "✓ Payment Done" : isBilled ? "Update Payment Status" : "💳 Proceed to Payment"}
@@ -546,7 +558,7 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
       })
 
       const data = await res.json()
-      
+
       if (res.ok) {
         console.log("[Billing] Invoice email sent successfully")
         onNotify("📧 Invoice sent to customer email", "success")
@@ -574,10 +586,10 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
       // Check if billing already exists (for pending payments)
       const isBilled = !!(appointment.billing?.id || appointment.billing_id)
       const isPaid = (appointment.billing?.payment_status || appointment.payment_status) === "paid"
-      
+
       // Use PATCH if billing exists and not paid, otherwise POST
       const method = isBilled && !isPaid ? "PATCH" : "POST"
-      
+
       const res = await fetch(`/api/appointments/${appointment.id}/billing`, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -851,7 +863,7 @@ function BillingModal({ appointment, onClose, onSaved, onNotify }) {
           </div>
         </form>
       )}
-      
+
       {showConfirm && (
         <ConfirmDialog
           title="Complete Billing"
