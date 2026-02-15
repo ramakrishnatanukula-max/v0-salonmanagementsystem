@@ -87,9 +87,20 @@ export default function PublicInvoicePage() {
                 setActualServices(services || [])
                 const staffIds = [...new Set((services || []).filter((s: any) => s.doneby_staff_id).map((s: any) => s.doneby_staff_id))]
                 if (staffIds.length > 0) {
-                  const staffPromises = staffIds.map((id: any) => fetch(`/api/staff/${id}`).then(r => r.json()))
-                  const staffData = await Promise.all(staffPromises)
-                  setAppointmentStaff(staffData.filter((s: any) => s && !s.error))
+                  try {
+                    // Fetch all staff once (much lighter on DB connections list vs N detail queries)
+                    const staffRes = await fetch(`/api/staff`)
+                    if (staffRes.ok) {
+                      const allStaff = await staffRes.json()
+                      // Filter locally
+                      const relevantStaff = Array.isArray(allStaff)
+                        ? allStaff.filter((s: any) => staffIds.includes(s.id))
+                        : []
+                      setAppointmentStaff(relevantStaff)
+                    }
+                  } catch (e) {
+                    console.error("Error fetching staff list", e)
+                  }
                 }
               }
               setLoading(false)
@@ -111,9 +122,18 @@ export default function PublicInvoicePage() {
                 setActualServices(services || [])
                 const staffIds = [...new Set((services || []).filter((s: any) => s.doneby_staff_id).map((s: any) => s.doneby_staff_id))]
                 if (staffIds.length > 0) {
-                  const staffPromises = staffIds.map((id: any) => fetch(`/api/staff/${id}`).then(r => r.json()))
-                  const staffData = await Promise.all(staffPromises)
-                  setAppointmentStaff(staffData.filter((s: any) => s && !s.error))
+                  try {
+                    const staffRes = await fetch(`/api/staff`)
+                    if (staffRes.ok) {
+                      const allStaff = await staffRes.json()
+                      const relevantStaff = Array.isArray(allStaff)
+                        ? allStaff.filter((s: any) => staffIds.includes(s.id))
+                        : []
+                      setAppointmentStaff(relevantStaff)
+                    }
+                  } catch (e) {
+                    console.error("Error fetching staff list", e)
+                  }
                 }
               }
             }
@@ -201,159 +221,65 @@ export default function PublicInvoicePage() {
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 md:p-8">
       <div className="max-w-screen-md mx-auto">
         <div className="bg-white rounded-xl shadow overflow-hidden border border-gray-100">
+          {/* Header Container */}
           <div
+            className="p-5 md:p-6 print:p-6 border-b-4 border-emerald-600 bg-[#0b0b0b] text-white"
             style={{
-              width: "100%",
-              padding: "20px 24px",
-              background: "#0b0b0b",
-              color: "#ffffff",
-              borderBottom: "3px solid #059669",
-              boxSizing: "border-box",
               fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
               WebkitPrintColorAdjust: "exact",
               printColorAdjust: "exact",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: "20px",
-              }}
-            >
+            <div className="flex flex-col md:flex-row print:flex-row justify-between items-start gap-6">
               {/* LEFT : LOGO + BUSINESS DETAILS */}
-              <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
+              <div className="flex gap-4 items-start w-full md:w-auto">
                 {/* LOGO */}
-                <div
-                  style={{
-                    width: "72px",
-                    height: "72px",
-                    borderRadius: "10px",
-                    background: "rgba(255,255,255,0.08)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    overflow: "hidden",
-                    flexShrink: 0,
-                  }}
-                >
+                <div className="w-[72px] h-[72px] shrink-0 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden">
                   <img
                     src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxKCpWlrl5Q6h27fXSHKJzR4JbuhWHONz4Ow&s"
                     alt="Unisalon Logo"
-                    style={{
-                      width: "60px",
-                      height: "auto",
-                      objectFit: "contain",
-                    }}
+                    className="w-[60px] h-auto object-contain"
                   />
                 </div>
 
                 {/* BUSINESS INFO */}
                 <div>
-                  <div
-                    style={{
-                      fontSize: "22px",
-                      fontWeight: 700,
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    UNISALON
-                  </div>
+                  <div className="text-xl md:text-2xl font-bold tracking-wide">UNISALON</div>
+                  <div className="text-xs font-semibold opacity-90 mt-0.5">By Shashi</div>
 
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      opacity: 0.9,
-                      marginTop: "2px",
-                    }}
-                  >
-                    By Shashi
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      marginTop: "6px",
-                      lineHeight: "1.45",
-                      color: "rgba(255,255,255,0.92)",
-                      maxWidth: "460px",
-                    }}
-                  >
+                  <div className="text-xs mt-1.5 leading-relaxed text-white/90 max-w-md">
                     110, Road No. 16, Alkapur Twp, Manikonda,
                     <br />
                     Hyderabad – 500 089
                   </div>
 
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      marginTop: "6px",
-                      color: "rgba(255,255,255,0.9)",
-                    }}
-                  >
+                  <div className="text-xs mt-1.5 text-white/90">
                     📧 info@unisalon.in &nbsp; | &nbsp; 📞 +91 76708 26262
                   </div>
                 </div>
               </div>
 
               {/* RIGHT : INVOICE DETAILS */}
-              <div style={{ textAlign: "right", minWidth: "180px" }}>
-                <h1
-                  style={{
-                    fontSize: "20px",
-                    fontWeight: 700,
-                    margin: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    gap: "8px",
-                  }}
-                >
+              <div className="text-left md:text-right print:text-right w-full md:w-auto min-w-[180px] mt-2 md:mt-0 print:mt-0">
+                <h1 className="text-xl font-bold flex items-center md:justify-end print:justify-end gap-2">
                   Invoice
-                  <span
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: "#34d399",
-                    }}
-                  >
-                    #{invoiceData.billId}
-                  </span>
+                  <span className="text-emerald-400 text-sm font-semibold">#{invoiceData.billId}</span>
                 </h1>
 
-                <div
-                  style={{
-                    fontSize: "12px",
-                    marginTop: "6px",
-                    opacity: 0.9,
-                  }}
-                >
-                  {invoiceData.appointmentDate}
-                </div>
-
-                <div
-                  style={{
-                    fontSize: "12px",
-                    marginTop: "2px",
-                    opacity: 0.9,
-                  }}
-                >
-                  {invoiceData.appointmentTime}
-                </div>
+                <div className="text-xs mt-1.5 opacity-90">{invoiceData.appointmentDate}</div>
+                <div className="text-xs mt-0.5 opacity-90">{invoiceData.appointmentTime}</div>
               </div>
             </div>
           </div>
 
           <div className="p-6 space-y-4">
-            <div className="flex justify-between">
+            <div className="flex flex-col md:flex-row print:flex-row justify-between gap-6">
               <div>
                 <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Bill To</p>
                 <p className="font-bold text-gray-800">{invoiceData.customerName}</p>
                 {invoiceData.customerPhone && <p className="text-sm text-gray-600">{invoiceData.customerPhone}</p>}
               </div>
-              <div className="text-right">
+              <div className="text-left md:text-right print:text-right">
                 <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Appointment</p>
                 <p className="font-semibold text-gray-800">#{appointment.id}</p>
                 <p className="text-sm text-gray-600">{invoiceData.appointmentTime}</p>
