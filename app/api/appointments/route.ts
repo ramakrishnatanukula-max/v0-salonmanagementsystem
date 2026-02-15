@@ -9,16 +9,16 @@ export async function GET(req: Request) {
   const date = searchParams.get("date") // YYYY-MM-DD
   const customer_id = searchParams.get("customer_id") // Filter by customer
   const billing_id = searchParams.get("billing_id") // Filter by billing id
-  
+
   // Build WHERE clause
   let whereConditions = []
   let params: any[] = []
-  
+
   if (date) {
     whereConditions.push("DATE(a.scheduled_start)=?")
     params.push(date)
   }
-  
+
   if (customer_id) {
     whereConditions.push("a.customer_id=?")
     params.push(customer_id)
@@ -28,18 +28,22 @@ export async function GET(req: Request) {
     whereConditions.push("ab.id=?")
     params.push(billing_id)
   }
-  
+
   // For staff role, filter by assigned staff in actual services
   if (currentUser?.role === 'staff' && currentUser?.user_id) {
     whereConditions.push(`a.id IN (SELECT DISTINCT appointment_id FROM appointment_actualtaken_services WHERE doneby_staff_id = ?)`)
     params.push(currentUser.user_id)
   }
-  
+
   const where = whereConditions.length > 0 ? "WHERE " + whereConditions.join(" AND ") : ""
-  
+
   const rows = await query<any>(
     `SELECT a.*, 
-            CONCAT(c.first_name,' ',c.last_name) AS customer_name,
+            CASE 
+              WHEN c.first_name IS NULL OR TRIM(c.first_name) = '' OR LOWER(TRIM(c.first_name)) = 'untitled' 
+              THEN c.phone 
+              ELSE CONCAT(c.first_name,' ',c.last_name) 
+            END AS customer_name,
             c.phone,
             c.email,
             fm.id as family_member_id,
@@ -60,7 +64,7 @@ export async function GET(req: Request) {
      ORDER BY a.scheduled_start ASC`,
     params,
   )
-  
+
   // Transform to include billing and family member objects
   const enrichedRows = (rows || []).map((row: any) => ({
     ...row,
@@ -79,7 +83,7 @@ export async function GET(req: Request) {
       updated_at: row.billing_date
     } : null
   }))
-  
+
   return NextResponse.json(enrichedRows)
 }
 
@@ -105,7 +109,7 @@ export async function POST(req: Request) {
 
   // Convert IST date/time to UTC for database storage
   const scheduled_start = createUTCDateFromIST(date, time)
-  
+
   // Extract service IDs and staff IDs for the appointment record
   const selected_servicesIds = selected_services.map(s => s.serviceId)
   const selected_staffIds = selected_services.map(s => s.staffId)
@@ -129,23 +133,23 @@ export async function POST(req: Request) {
   // Create actual services with assigned staff for each selected service
   if (selected_services.length > 0) {
     const serviceIds = selected_services.map((s: any) => Number(s.serviceId)).filter((id: number) => id > 0);
-    
+
     if (serviceIds.length > 0) {
       const placeholders = serviceIds.map(() => '?').join(',');
       const services = await query<any>(
         `SELECT id, price FROM services WHERE id IN (${placeholders})`,
         serviceIds
       );
-      
+
       // Create a map of service prices
       const servicePriceMap = new Map(services.map((s: any) => [s.id, s.price]));
-      
+
       // Insert actual services with their assigned staff
       for (const selectedService of selected_services) {
         const serviceId = Number(selectedService.serviceId);
         const staffId = selectedService.staffId ? Number(selectedService.staffId) : null;
         const price = servicePriceMap.get(serviceId) || 0;
-        
+
         await execute(
           `INSERT INTO appointment_actualtaken_services 
            (appointment_id, service_id, doneby_staff_id, status, price) 

@@ -2,7 +2,7 @@
 
 import SignupForm from "@/components/auth/signup-form"
 import { useState, useEffect } from "react"
-import { AlertCircle, Lock } from "lucide-react"
+import { AlertCircle, Lock, UserPlus, Sparkles } from "lucide-react"
 
 type Service = { id: number; name: string; category_id: number; price: number | string; duration_min: number | null }
 type Category = { id: number; name: string }
@@ -14,7 +14,6 @@ export default function Page() {
   const [categories, setCategories] = useState<any[]>([])
 
   useEffect(() => {
-    // Check authorization on client side
     const checkAuth = async () => {
       try {
         const response = await fetch("/api/auth/me")
@@ -22,12 +21,11 @@ export default function Page() {
           const user = await response.json()
           if (user.role === "admin") {
             setAuthorized(true)
-            // Fetch categories
             const catRes = await fetch("/api/categories")
             const catData = await catRes.json()
             const servicesRes = await fetch("/api/services")
             const servicesData = await servicesRes.json()
-            
+
             const catsArray = Array.isArray(catData) ? catData : [catData]
             const grouped = catsArray.map((c: any) => ({
               id: c.id,
@@ -61,12 +59,12 @@ export default function Page() {
 
   if (authorized === null) {
     return (
-      <main className="min-h-dvh bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <main className="min-h-dvh bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="inline-block p-3 bg-indigo-100 rounded-full mb-4 animate-pulse">
-            <Lock className="w-6 h-6 text-indigo-600" />
+          <div className="inline-block p-4 bg-white rounded-2xl shadow-lg mb-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-3 border-indigo-600 border-t-transparent mx-auto" />
           </div>
-          <p className="text-gray-600 font-medium">Loading...</p>
+          <p className="text-gray-600 font-medium">Checking authorization...</p>
         </div>
       </main>
     )
@@ -74,7 +72,7 @@ export default function Page() {
 
   if (!authorized) {
     return (
-      <main className="min-h-dvh bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <main className="min-h-dvh bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 max-w-md w-full">
           <div className="flex justify-center mb-4">
             <div className="p-4 bg-red-100 rounded-full">
@@ -93,7 +91,7 @@ export default function Page() {
           </div>
           <a
             href="/dashboard"
-            className="w-full px-4 py-3 bg-gradient-to-r from-indigo-600 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all text-center block"
+            className="w-full px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all text-center block"
           >
             Back to Dashboard
           </a>
@@ -103,25 +101,29 @@ export default function Page() {
   }
 
   return (
-    <main className="min-h-dvh bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 md:p-6">
+    <main className="min-h-dvh bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-3 md:p-6">
       {/* Header */}
-      <div className={`mb-6 sticky top-4 z-10 bg-white/80 backdrop-blur-md rounded-xl p-4 shadow-sm max-w-4xl mx-auto transition-all duration-300 transform ${
-        showHeader ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
-      }`}>
-        <div className="flex items-center justify-between">
+      <div
+        className={`mb-6 sticky top-4 z-10 bg-white/80 backdrop-blur-md rounded-2xl p-4 md:p-5 shadow-lg border border-white/50 max-w-4xl mx-auto transition-all duration-300 transform ${showHeader ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
+          }`}
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
+            <UserPlus className="w-6 h-6 text-white" />
+          </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Lock className="w-8 h-8 text-indigo-600" />
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
               Staff Registration
+              <Sparkles size={18} className="text-amber-500" />
             </h1>
-            <p className="text-xs md:text-sm text-gray-600 mt-1">Add new team members to your salon</p>
+            <p className="text-xs md:text-sm text-gray-500 mt-0.5">Add new team members to your salon</p>
           </div>
         </div>
       </div>
 
       {/* Form Container */}
-      <div className="flex items-start justify-center px-4 pb-32 max-w-4xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 md:p-10 w-full">
+      <div className="flex items-start justify-center px-0 md:px-4 pb-32 max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100/50 p-5 md:p-8 lg:p-10 w-full">
           <SignupForm categories={categories} />
         </div>
       </div>

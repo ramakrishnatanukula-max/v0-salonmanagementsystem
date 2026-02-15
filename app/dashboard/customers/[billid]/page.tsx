@@ -250,20 +250,22 @@ export default function BillDetailPage() {
               >
                 Download PDF
               </button>
-              <button
-                onClick={() => {
-                  const phone = invoiceData.customerPhone || ''
-                  if (!phone) {
-                    setToast({ type: 'error', message: 'Customer phone not available for WhatsApp share' })
-                    return
-                  }
-                  shareInvoiceLinkViaWhatsApp(invoiceData, phone)
-                  setToast({ type: 'success', message: 'Opening WhatsApp with invoice link...' })
-                }}
-                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg"
-              >
-                Share via WhatsApp
-              </button>
+              {invoiceData.customerPhone && !invoiceData.customerPhone.startsWith('UNISL') && (
+                <button
+                  onClick={() => {
+                    const phone = invoiceData.customerPhone || ''
+                    if (!phone) {
+                      setToast({ type: 'error', message: 'Customer phone not available for WhatsApp share' })
+                      return
+                    }
+                    shareInvoiceLinkViaWhatsApp(invoiceData, phone)
+                    setToast({ type: 'success', message: 'Opening WhatsApp with invoice link...' })
+                  }}
+                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg"
+                >
+                  Share via WhatsApp
+                </button>
+              )}
             </div>
           </div>
 

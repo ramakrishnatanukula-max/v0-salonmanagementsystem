@@ -59,6 +59,16 @@ export default function AppointmentsPage() {
     return map
   }, [staff])
 
+  const activeServices = useMemo(() => {
+    if (!Array.isArray(services)) return []
+    return services.filter((s: any) => s.is_active === 1 || s.is_active === true)
+  }, [services])
+
+  const activeCategories = useMemo(() => {
+    if (!Array.isArray(categories)) return []
+    return categories.filter((c: any) => c.is_active === 1 || c.is_active === true)
+  }, [categories])
+
   const days = useMemo(() => {
     const base = new Date(date)
     const out = []
@@ -181,7 +191,9 @@ export default function AppointmentsPage() {
               <div className="flex justify-between items-start gap-3">
                 <div className="flex-grow min-w-0">
                   <p className={`font-semibold text-base truncate ${isPaid ? "text-gray-400" : "text-gray-900"}`}>
-                    {a.customer_name}
+                    {(!a.customer_name || a.customer_name.trim() === '' || a.customer_name.trim().toLowerCase() === 'untitled' || a.customer_name.trim().toLowerCase() === 'untitled ') ? (
+                      <span className="text-purple-700 font-bold">{a.phone || 'Walk-in'}</span>
+                    ) : a.customer_name}
                     {a.family_member && <span className="text-sm font-normal text-purple-600"> → {a.family_member.name}</span>}
                   </p>
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -251,7 +263,7 @@ export default function AppointmentsPage() {
                       <div>
                         <AddActualServicesButton
                           appointmentId={a.id}
-                          services={services}
+                          services={activeServices}
                           staff={staff}
                           currentStaffMember={currentStaffMember}
                           currentUser={currentUser}
@@ -287,8 +299,8 @@ export default function AppointmentsPage() {
       {/* Form Modal */}
       {showForm && (
         <FormModalContainer
-          services={services}
-          categories={categories}
+          services={activeServices}
+          categories={activeCategories}
           staff={staff}
           onClose={() => setShowForm(false)}
           onCreated={() => {
@@ -421,12 +433,20 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
     }
   }
 
-  const handleAutoGenerate = () => {
-    const random5 = Math.floor(10000 + Math.random() * 90000); // 5 digits
-    const generated = `UNISL${random5}`;
+  const handleAutoGenerate = async () => {
+    try {
+      setLookupLoading(true);
+      const res = await fetch('/api/customers/next-unisl-id');
+      const data = await res.json();
+      const generated = data.nextId; // e.g., UNISL00001
 
-    setMobileNumber(generated);
-    handleFetchDetails(generated);
+      setMobileNumber(generated);
+      handleFetchDetails(generated);
+    } catch (err) {
+      onError?.('Failed to generate UNISL ID');
+    } finally {
+      setLookupLoading(false);
+    }
   };
 
 
@@ -501,12 +521,14 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
     setStep(3)
   }
 
+  const isUnislId = mobileNumber.startsWith('UNISL');
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
     // First name is optional now, defaults to "untitled" if empty
     // if (!customer?.first_name?.trim()) newErrors.first_name = "First name is required"
     if (!mobileNumber.trim()) newErrors.phone = "Phone is required"
-    if (mobileNumber.trim().length !== 10) newErrors.phone = "Phone must be 10 digits"
+    if (!isUnislId && mobileNumber.trim().length !== 10) newErrors.phone = "Phone must be 10 digits"
     if (selectedServices.length === 0) newErrors.services = "Select at least one service"
     return newErrors
   }
@@ -629,18 +651,29 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
                       placeholder="Enter 10-digit number"
                       value={mobileNumber}
                       onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '')
-                        if (value.length <= 10) setMobileNumber(value)
+                        const value = e.target.value
+                        // Allow UNISL-prefixed IDs as-is, otherwise restrict to digits only
+                        if (value.startsWith('UNISL')) {
+                          setMobileNumber(value)
+                        } else {
+                          const digitsOnly = value.replace(/\D/g, '')
+                          if (digitsOnly.length <= 10) setMobileNumber(digitsOnly)
+                        }
                       }}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleFetchDetails())}
-                      maxLength={10}
-                      pattern="[0-9]{10}"
                       autoFocus
                     />
-                    {mobileNumber && (
+                    {mobileNumber && !mobileNumber.startsWith('UNISL') && (
                       <div className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-xs font-medium">
                         <span className={mobileNumber.length === 10 ? "text-green-600" : "text-gray-400"}>
                           {mobileNumber.length}/10
+                        </span>
+                      </div>
+                    )}
+                    {mobileNumber.startsWith('UNISL') && (
+                      <div className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-xs font-medium">
+                        <span className="text-purple-600 font-semibold">
+                          ✓ UNISL
                         </span>
                       </div>
                     )}
@@ -657,7 +690,7 @@ function FormModalContainer({ services, categories, staff, onClose, onCreated, o
                   <button
                     type="button"
                     onClick={handleFetchDetails}
-                    disabled={lookupLoading || mobileNumber.length !== 10}
+                    disabled={lookupLoading || (!mobileNumber.startsWith('UNISL') && mobileNumber.length !== 10)}
                     className="w-full sm:w-auto px-6 md:px-8 py-3 md:py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold shadow-lg hover:shadow-xl hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                   >
                     {lookupLoading ? (

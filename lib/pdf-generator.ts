@@ -32,11 +32,11 @@ export async function downloadInvoicePDF(data: InvoiceData): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
-    
+
     if (!response.ok) {
       throw new Error('Failed to generate PDF')
     }
-    
+
     const blob = await response.blob()
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -61,19 +61,23 @@ export async function shareInvoicePDFViaWhatsApp(data: InvoiceData, phoneNumber:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
-    
+
     if (!response.ok) {
       throw new Error('Failed to generate PDF')
     }
-    
+
     const blob = await response.blob()
-    
+
     // Create WhatsApp message with invoice details
     const message = `*Hello ${data.customerName}!*\n\nThank you for visiting our salon! We hope you loved your experience.\n\n========================================\n*INVOICE DETAILS*\n========================================\n\nInvoice Number: *#${data.billId}*\nDate: ${data.appointmentDate}\nTime: ${data.appointmentTime}${data.familyMemberName ? `\nService For: ${data.familyMemberName}` : ''}\n\n========================================\n*SERVICES PROVIDED*\n========================================\n\n${data.services.map((s, i) => `${i + 1}. ${s.name}${s.staffName ? ` (by ${s.staffName})` : ''}\n   Rs.${s.total.toFixed(2)}`).join('\n\n')}\n\n========================================\n*PAYMENT SUMMARY*\n========================================\n\n${data.discount > 0 ? `Subtotal: Rs.${data.subtotal.toFixed(2)}\nDiscount: -Rs.${data.discount.toFixed(2)}\n` : ''}Payment Method: ${data.paymentMethod.toUpperCase()}\nPayment Status: ${data.paymentStatus.toUpperCase()}\n\n*TOTAL AMOUNT: Rs.${data.finalAmount.toFixed(2)}*\n\n`
-    
-    const cleanPhone = phoneNumber.replace(/[^0-9]/g, '')
+
+    let cleanPhone = phoneNumber.replace(/[^0-9]/g, '')
+    // Add Indian country code if it's a 10-digit number without prefix
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone
+    }
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
-    
+
     // Download the PDF first
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -83,7 +87,7 @@ export async function shareInvoicePDFViaWhatsApp(data: InvoiceData, phoneNumber:
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
-    
+
     // Open WhatsApp after a short delay
     setTimeout(() => {
       window.open(whatsappUrl, '_blank')
@@ -109,7 +113,11 @@ export function shareInvoiceLinkViaWhatsApp(data: InvoiceData, phoneNumber: stri
 
     const message = `Thank you for visiting UniSalon! Here is your invoice: ${invoiceUrl}\nYou can download it from the link.`
 
-    const cleanPhone = phoneNumber.replace(/[^0-9]/g, '')
+    let cleanPhone = phoneNumber.replace(/[^0-9]/g, '')
+    // Add Indian country code if it's a 10-digit number without prefix
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone
+    }
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
 
     // Open WhatsApp Web with the message

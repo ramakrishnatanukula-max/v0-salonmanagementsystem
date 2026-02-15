@@ -5,7 +5,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const categoryId = searchParams.get("category_id")
   const sql =
-    "SELECT s.*, c.name AS category_name FROM services s LEFT JOIN service_categories c ON s.category_id = c.id" +
+    "SELECT s.*, CAST(s.is_active AS UNSIGNED) AS is_active, c.name AS category_name FROM services s LEFT JOIN service_categories c ON s.category_id = c.id" +
     (categoryId ? " WHERE s.category_id = ?" : "") +
     " ORDER BY s.name ASC"
   const result = await query<any[]>(sql, categoryId ? [Number(categoryId)] : [])

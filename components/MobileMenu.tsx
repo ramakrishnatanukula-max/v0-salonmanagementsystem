@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, X, ShoppingBag, Layers, UserPlus, LogOut } from "lucide-react"
+import { Menu, X, ShoppingBag, Layers, UserPlus, LogOut, Scissors } from "lucide-react"
 import { useRouter } from "next/navigation"
 import useSWR from "swr"
 
@@ -26,6 +26,7 @@ export default function MobileMenu() {
     { icon: ShoppingBag, label: "Services", href: "/dashboard/services", roles: ["admin"] },
     { icon: Layers, label: "Categories", href: "/dashboard/services/categories", roles: ["admin"] },
     { icon: UserPlus, label: "Role Management", href: "/dashboard/staff", roles: ["admin"] },
+    { icon: Scissors, label: "Staff Skills", href: "/dashboard/staff/skills", roles: ["admin"] },
     { icon: UserPlus, label: "Staff Creation", href: "/dashboard/signup", roles: ["admin"] },
     { icon: UserPlus, label: "Customer Management", href: "/dashboard/customers", roles: ["admin", "receptionist", "staff"] },
 
@@ -64,9 +65,8 @@ export default function MobileMenu() {
 
       {/* Mobile Menu Dropdown */}
       <div
-        className={`md:hidden fixed top-14 left-0 right-0 mx-3 z-[70] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transition-all duration-200 ${
-          isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
-        }`}
+        className={`md:hidden fixed top-14 left-0 right-0 mx-3 z-[70] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transition-all duration-200 ${isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+          }`}
       >
         {/* User Info Header */}
         {data?.name && (
@@ -75,7 +75,7 @@ export default function MobileMenu() {
             <p className="text-xs text-gray-600 capitalize">{data.role}</p>
           </div>
         )}
-        
+
         <nav className="py-1">
           {menuItems.length > 0 && (
             <>

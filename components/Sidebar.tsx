@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import useSWR from "swr"
-import { Home, ClipboardList, Layers, CreditCard, BarChart3, Users, LogOut } from "lucide-react"
+import { Home, ClipboardList, Layers, CreditCard, BarChart3, Users, LogOut, Scissors } from "lucide-react"
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json())
 
@@ -21,6 +21,7 @@ export default function Sidebar() {
     { label: "Services", href: "/dashboard/services", icon: ClipboardList, roles: ["admin"] },
     { label: "Categories", href: "/dashboard/services/categories", icon: Layers, roles: ["admin"] },
     { label: "Role Management", href: "/dashboard/staff", icon: Users, roles: ["admin"] },
+    { label: "Staff Skills", href: "/dashboard/staff/skills", icon: Scissors, roles: ["admin"] },
     { label: "User Management", href: "/dashboard/signup", icon: Users, roles: ["admin"] },
   ]
 
@@ -42,19 +43,18 @@ export default function Sidebar() {
           <p className="text-sm text-gray-600 mt-1">Welcome, {data.name}</p>
         )}
       </div>
-      
+
       <nav className="flex-1 overflow-y-auto p-4 space-y-1">
         {navItems.map(({ label, href, icon: Icon }) => {
-          const isActive = pathname === href || pathname?.startsWith(href + "/")
+          const isActive = pathname === href || (pathname?.startsWith(href + "/") && !allItems.some(other => other.href !== href && other.href.startsWith(href + "/") && (pathname === other.href || pathname?.startsWith(other.href + "/"))))
           return (
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                isActive
-                  ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white shadow-md"
-                  : "text-gray-700 hover:bg-white/50"
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive
+                ? "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white shadow-md"
+                : "text-gray-700 hover:bg-white/50"
+                }`}
             >
               <Icon size={20} />
               <span className="font-medium">{label}</span>

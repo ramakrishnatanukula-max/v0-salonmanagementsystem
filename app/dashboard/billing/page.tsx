@@ -229,6 +229,7 @@ function AppointmentServicesPanel({
   // Check if already billed/paid - handle both nested and flat structures
   const isBilled = !!(appointment.billing?.id || appointment.billing_id)
   const isPaid = (appointment.billing?.payment_status || appointment.payment_status) === "paid"
+  const customerPhone = appointment.customer_phone || appointment.customer_mobile || appointment.customer_contact || appointment.phone || ''
 
   // Calculate base amount and GST from total price (price includes GST)
   const itemsWithTax = (Array.isArray(items) ? items : []).map((it: any) => {
@@ -345,16 +346,23 @@ function AppointmentServicesPanel({
           <div className="mt-3 flex items-center gap-2">
             <button
               type="button"
-              className="px-3 py-1 rounded-md bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
+              className={`px-3 py-1 rounded-md text-sm font-semibold transition ${customerPhone && !customerPhone.startsWith('UNISL')
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              disabled={!customerPhone || customerPhone.startsWith('UNISL')}
+              title={(!customerPhone || customerPhone.startsWith('UNISL')) ? 'WhatsApp not available for UNISL walk-in customers' : 'Share invoice via WhatsApp'}
               onClick={() => {
+                if (!customerPhone || customerPhone.startsWith('UNISL')) {
+                  onNotify('WhatsApp sharing is only available for customers with a real mobile number', 'info')
+                  return
+                }
                 try {
                   const billId = appointment.billing?.id || appointment.billing_id
                   if (!billId) {
                     onNotify('Billing id not available to share', 'error')
                     return
                   }
-
-                  const customerPhone = appointment.customer_phone || appointment.customer_mobile || appointment.customer_contact || appointment.phone || ''
 
                   const invoiceData: any = {
                     billId: billId,
@@ -457,10 +465,10 @@ function AppointmentServicesPanel({
       <button
         disabled={isPaid}
         className={`mt-3 w-full rounded-lg px-4 py-2 font-semibold text-sm shadow transition-all ${isPaid
-            ? "bg-gray-300 text-gray-600 cursor-not-allowed opacity-60"
-            : isBilled
-              ? "bg-amber-600 text-white hover:bg-amber-700 hover:shadow-md"
-              : "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white hover:shadow-md hover:brightness-110"
+          ? "bg-gray-300 text-gray-600 cursor-not-allowed opacity-60"
+          : isBilled
+            ? "bg-amber-600 text-white hover:bg-amber-700 hover:shadow-md"
+            : "bg-gradient-to-r from-indigo-600 to-emerald-600 text-white hover:shadow-md hover:brightness-110"
           }`}
         onClick={() => setShowModal(true)}
       >
