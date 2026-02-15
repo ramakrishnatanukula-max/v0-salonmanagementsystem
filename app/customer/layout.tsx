@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-    title: 'Customer Portal | unisalon', // TODO: Make dynamic based on salon name if needed
+    title: 'My Portal',
     description: 'Access your profile, family members, and appointment history.',
 }
 
